@@ -111,7 +111,7 @@ export default function App() {
     setGroups(teams);
   };
 
-  const backgroundColor = theme === 'dark' ? '#121212' : '#ffffff';
+  const backgroundColor = theme === 'dark' ? '#2E3440' : '#ffffff';
 
   return (
     <ScrollView style={[styles.container, { backgroundColor }]}>
