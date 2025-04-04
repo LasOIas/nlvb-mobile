@@ -1,12 +1,18 @@
 // File: app/(tabs)/groups.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, StyleSheet, FlatList, Picker } from 'react-native';
+import { View, Text, Button, StyleSheet, FlatList } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function GroupsScreen() {
   const [players, setPlayers] = useState<any[]>([]);
   const [checkedIn, setCheckedIn] = useState<string[]>([]);
-  const [groups, setGroups] = useState<any[][]>([]);
+  interface Player {
+    name: string;
+    skill: number;
+  }
+
+  const [groups, setGroups] = useState<Player[][]>([]);
   const [numGroups, setNumGroups] = useState(2);
 
   useEffect(() => {
@@ -25,17 +31,23 @@ export default function GroupsScreen() {
   const normalize = (s: string) => s.trim().toLowerCase();
 
   const distribute = () => {
-    const eligible = players.filter(p =>
+    const teamCount = Number(numGroups) || 2;
+    if (!players.length || !checkedIn.length || teamCount <= 0) {
+      console.warn('Distribution skipped: no players or invalid group count');
+      return;
+    }
+
+    const teams: Player[][] = Array.from({ length: teamCount }, () => []);
+    const eligible = players.filter(p => 
       checkedIn.some(c => normalize(c) === normalize(p.name))
     );
 
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teams = Array.from({ length: numGroups }, () => []);
-    const totals = new Array(numGroups).fill(0);
+    const totals = new Array(teamCount).fill(0);
 
     for (const p of sorted) {
       let minIndex = 0;
-      for (let i = 1; i < numGroups; i++) {
+      for (let i = 1; i < teamCount; i++) {
         if (totals[i] < totals[minIndex]) minIndex = i;
       }
       teams[minIndex].push(p);
