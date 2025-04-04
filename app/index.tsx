@@ -19,7 +19,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [groups, setGroups] = useState<Player[][]>([]);
-  const [numGroups, setNumGroups] = useState(2);
+  const [numGroups, setNumGroups] = useState<number>(2);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -44,17 +44,17 @@ export default function App() {
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
-  const checkInPlayer = () => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    const match = players.find(p => normalize(p.name) === normalize(trimmed));
+  const checkInPlayer = (targetName?: string) => {
+    const nameToCheck = targetName || name.trim();
+    if (!nameToCheck) return;
+    const match = players.find(p => normalize(p.name) === normalize(nameToCheck));
     if (match && !checkedInPlayers.includes(match.name)) {
       setCheckedInPlayers([...checkedInPlayers, match.name]);
       setMessage('Checked in');
     } else {
       setMessage('Player not found');
     }
-    setName('');
+    if (!targetName) setName('');
     setTimeout(() => setMessage(''), 2000);
   };
 
@@ -81,45 +81,28 @@ export default function App() {
     }
   };
 
-  const logoutAdmin = () => {
-    setIsAdmin(false);
+  const updatePlayer = (index: number, newSkillStr: string) => {
+    const newSkill = parseFloat(newSkillStr);
+    if (!isNaN(newSkill)) {
+      const updated = [...players];
+      updated[index].skill = newSkill;
+      setPlayers(updated);
+    }
   };
 
   const resetCheckIns = () => {
     setCheckedInPlayers([]);
   };
 
-  const addPlayerAsAdmin = () => {
-    const trimmed = name.trim();
-    const parsedSkill = parseFloat(skill);
-    if (!trimmed || isNaN(parsedSkill)) return;
-    setPlayers([...players, { name: trimmed, skill: parsedSkill }]);
-    setName('');
-    setSkill('');
-  };
-
-  const updatePlayer = (index: number) => {
-    const newSkill = parseFloat(skill);
-    if (!isNaN(newSkill)) {
-      const updated = [...players];
-      updated[index].skill = newSkill;
-      setPlayers(updated);
-      setSkill('');
-    }
-  };
-
-  const checkInAsAdmin = (name: string) => {
-    if (!checkedInPlayers.includes(name)) {
-      setCheckedInPlayers([...checkedInPlayers, name]);
-    }
+  const logout = () => {
+    setIsAdmin(false);
   };
 
   const distributeGroups = () => {
-    const groupCount = Math.max(1, Number(numGroups));
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teams: Player[][] = Array.from({ length: groupCount }, () => []);
-    const totals = new Array(groupCount).fill(0);
+    const teams: Player[][] = Array.from({ length: numGroups }, () => []);
+    const totals = new Array(numGroups).fill(0);
 
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
@@ -141,7 +124,7 @@ export default function App() {
             value={name}
             onChangeText={setName}
           />
-          <Button title="Check In" onPress={checkInPlayer} />
+          <Button title="Check In" onPress={() => checkInPlayer()} />
           <Button title="Register" onPress={registerPlayer} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
 
@@ -159,32 +142,18 @@ export default function App() {
         <View>
           <Text style={styles.subheader}>Admin Panel</Text>
 
-          <TextInput
-            placeholder="Player Name"
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-          />
-          <TextInput
-            placeholder="Skill"
-            keyboardType="numeric"
-            style={styles.input}
-            value={skill}
-            onChangeText={setSkill}
-          />
-          <Button title="Add Player" onPress={addPlayerAsAdmin} />
-
           {players.map((p, i) => (
             <View key={i} style={styles.playerRow}>
               <Text>{p.name} (Skill: {p.skill})</Text>
-              <Button title="Check-In" onPress={() => checkInAsAdmin(p.name)} />
+              {!checkedInPlayers.includes(p.name) && (
+                <Button title="Check-In" onPress={() => checkInPlayer(p.name)} color="blue" />
+              )}
               <TextInput
                 placeholder="New Skill"
                 keyboardType="numeric"
                 style={styles.skillInput}
-                onChangeText={setSkill}
+                onChangeText={(val) => updatePlayer(i, val)}
               />
-              <Button title="Update" onPress={() => updatePlayer(i)} />
             </View>
           ))}
 
@@ -199,7 +168,9 @@ export default function App() {
             ))}
           </Picker>
 
-          <Button title="Generate Groups" onPress={distributeGroups} />
+          <Button title="Generate Groups" onPress={distributeGroups} color="dodgerblue" />
+          <Button title="Reset All Check-Ins" onPress={resetCheckIns} color="orange" />
+          <Button title="Logout" onPress={logout} color="red" />
 
           {groups.map((g, i) => (
             <View key={i} style={styles.groupBox}>
@@ -209,9 +180,6 @@ export default function App() {
               ))}
             </View>
           ))}
-
-          <Button title="Reset All Check-Ins" onPress={resetCheckIns} color="orange" />
-          <Button title="Logout" onPress={logoutAdmin} color="red" />
         </View>
       )}
     </ScrollView>
