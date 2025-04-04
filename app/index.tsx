@@ -1,10 +1,9 @@
 // File: app/index.tsx
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, Button, FlatList, StyleSheet, Alert, ScrollView
+  View, Text, TextInput, Button, StyleSheet, Alert, ScrollView
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Picker } from '@react-native-picker/picker';
 
 interface Player {
   name: string;
@@ -19,7 +18,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [groups, setGroups] = useState<Player[][]>([]);
-  const [numGroups, setNumGroups] = useState<number>(2);
+  const [numGroupsInput, setNumGroupsInput] = useState('2');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -92,11 +91,12 @@ export default function App() {
   };
 
   const distributeGroups = () => {
+    const numGroups = parseInt(numGroupsInput);
+    if (isNaN(numGroups) || numGroups <= 0) return;
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teamCount = Math.max(1, Math.min(numGroups, 10));
-    const teams: Player[][] = Array.from({ length: teamCount }, () => []);
-    const totals = new Array(teamCount).fill(0);
+    const teams: Player[][] = Array.from({ length: numGroups }, () => []);
+    const totals = new Array(numGroups).fill(0);
 
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
@@ -106,18 +106,17 @@ export default function App() {
     setGroups(teams);
   };
 
+  const resetCheckins = () => setCheckedInPlayers([]);
+
+  const logout = () => setIsAdmin(false);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <Text style={styles.header}>NLVB App</Text>
 
       {!isAdmin ? (
         <View>
-          <TextInput
-            placeholder="Your name"
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-          />
+          <TextInput placeholder="Your name" style={styles.input} value={name} onChangeText={setName} />
           <Button title="Check In" onPress={checkInPlayer} />
           <Button title="Register" onPress={registerPlayer} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
@@ -136,6 +135,13 @@ export default function App() {
         <View>
           <Text style={styles.subheader}>Admin Panel</Text>
 
+          <TextInput placeholder="Add player name" style={styles.input} value={name} onChangeText={setName} />
+          <TextInput placeholder="Skill" style={styles.input} value={skill} onChangeText={setSkill} keyboardType="numeric" />
+          <Button title="Add Player" onPress={registerPlayer} />
+          <Button title="Check In Player" onPress={checkInPlayer} />
+          <Button title="Reset All Check-Ins" onPress={resetCheckins} color="red" />
+          <Button title="Logout" onPress={logout} color="gray" />
+
           {players.map((p, i) => (
             <View key={i} style={styles.playerRow}>
               <Text>{p.name} (Skill: {p.skill})</Text>
@@ -150,16 +156,13 @@ export default function App() {
           ))}
 
           <Text style={styles.label}>Number of Groups:</Text>
-          <Picker
-            selectedValue={numGroups}
-            onValueChange={(v) => setNumGroups(v)}
-            style={styles.picker}
-          >
-            {[...Array(10)].map((_, i) => (
-              <Picker.Item key={i + 1} label={`${i + 1}`} value={i + 1} />
-            ))}
-          </Picker>
-
+          <TextInput
+            placeholder="Enter number of groups"
+            value={numGroupsInput}
+            onChangeText={setNumGroupsInput}
+            keyboardType="numeric"
+            style={styles.input}
+          />
           <Button title="Generate Groups" onPress={distributeGroups} />
 
           {groups.map((g, i) => (
@@ -194,10 +197,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, marginVertical: 5, padding: 5, borderRadius: 5, backgroundColor: '#fff'
   },
   label: { marginTop: 20 },
-  picker: { backgroundColor: '#fff', marginBottom: 10 },
   groupBox: {
-    marginTop: 15,
-    padding: 10,
+    marginTop: 10,
+    padding: 8,
     backgroundColor: '#f2f2f2',
     borderRadius: 8
   },
