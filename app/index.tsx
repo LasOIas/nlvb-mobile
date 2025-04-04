@@ -16,8 +16,6 @@ export default function App() {
   const [checkedInPlayers, setCheckedInPlayers] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [skill, setSkill] = useState('');
-  const [newPlayerName, setNewPlayerName] = useState('');
-  const [newPlayerSkill, setNewPlayerSkill] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [groups, setGroups] = useState<Player[][]>([]);
@@ -91,24 +89,13 @@ export default function App() {
     setCheckedInPlayers([]);
   };
 
-  const addNewPlayer = () => {
-    const trimmed = newPlayerName.trim();
-    const parsedSkill = parseFloat(newPlayerSkill);
+  const addPlayerAsAdmin = () => {
+    const trimmed = name.trim();
+    const parsedSkill = parseFloat(skill);
     if (!trimmed || isNaN(parsedSkill)) return;
-    const exists = players.some(p => normalize(p.name) === normalize(trimmed));
-    if (!exists) {
-      setPlayers([...players, { name: trimmed, skill: parsedSkill }]);
-      setNewPlayerName('');
-      setNewPlayerSkill('');
-    }
-  };
-
-  const toggleCheckIn = (name: string) => {
-    if (checkedInPlayers.includes(name)) {
-      setCheckedInPlayers(checkedInPlayers.filter(n => n !== name));
-    } else {
-      setCheckedInPlayers([...checkedInPlayers, name]);
-    }
+    setPlayers([...players, { name: trimmed, skill: parsedSkill }]);
+    setName('');
+    setSkill('');
   };
 
   const updatePlayer = (index: number) => {
@@ -121,13 +108,18 @@ export default function App() {
     }
   };
 
+  const checkInAsAdmin = (name: string) => {
+    if (!checkedInPlayers.includes(name)) {
+      setCheckedInPlayers([...checkedInPlayers, name]);
+    }
+  };
+
   const distributeGroups = () => {
-    const eligible = players.filter(p =>
-      checkedInPlayers.includes(p.name)
-    );
+    const groupCount = Math.max(1, Number(numGroups));
+    const eligible = players.filter(p => checkedInPlayers.includes(p.name));
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teams: Player[][] = Array.from({ length: numGroups }, () => []);
-    const totals = new Array(numGroups).fill(0);
+    const teams: Player[][] = Array.from({ length: groupCount }, () => []);
+    const totals = new Array(groupCount).fill(0);
 
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
@@ -168,35 +160,35 @@ export default function App() {
           <Text style={styles.subheader}>Admin Panel</Text>
 
           <TextInput
-            placeholder="New player name"
+            placeholder="Player Name"
             style={styles.input}
-            value={newPlayerName}
-            onChangeText={setNewPlayerName}
+            value={name}
+            onChangeText={setName}
           />
           <TextInput
             placeholder="Skill"
-            style={styles.input}
             keyboardType="numeric"
-            value={newPlayerSkill}
-            onChangeText={setNewPlayerSkill}
+            style={styles.input}
+            value={skill}
+            onChangeText={setSkill}
           />
-          <Button title="Add Player" onPress={addNewPlayer} />
+          <Button title="Add Player" onPress={addPlayerAsAdmin} />
 
           {players.map((p, i) => (
             <View key={i} style={styles.playerRow}>
               <Text>{p.name} (Skill: {p.skill})</Text>
+              <Button title="Check-In" onPress={() => checkInAsAdmin(p.name)} />
               <TextInput
-                placeholder="Skill"
+                placeholder="New Skill"
                 keyboardType="numeric"
                 style={styles.skillInput}
                 onChangeText={setSkill}
               />
               <Button title="Update" onPress={() => updatePlayer(i)} />
-              <Button title={checkedInPlayers.includes(p.name) ? 'Uncheck' : 'Check In'} onPress={() => toggleCheckIn(p.name)} />
             </View>
           ))}
 
-          <Text style={styles.label}>Groups:</Text>
+          <Text style={styles.label}>Number of Groups:</Text>
           <Picker
             selectedValue={numGroups}
             onValueChange={(v) => setNumGroups(v)}
@@ -208,8 +200,6 @@ export default function App() {
           </Picker>
 
           <Button title="Generate Groups" onPress={distributeGroups} />
-          <Button title="Reset Check-Ins" onPress={resetCheckIns} color="orange" />
-          <Button title="Logout Admin" onPress={logoutAdmin} color="red" />
 
           {groups.map((g, i) => (
             <View key={i} style={styles.groupBox}>
@@ -219,6 +209,9 @@ export default function App() {
               ))}
             </View>
           ))}
+
+          <Button title="Reset All Check-Ins" onPress={resetCheckIns} color="orange" />
+          <Button title="Logout" onPress={logoutAdmin} color="red" />
         </View>
       )}
     </ScrollView>
