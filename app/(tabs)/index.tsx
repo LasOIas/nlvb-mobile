@@ -1,58 +1,76 @@
-import { Text, View, TextInput, Button, StyleSheet } from 'react-native';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { View, Text, TextInput, Button, StyleSheet, ScrollView } from 'react-native';
 
-export default function HomeScreen() {
+export default function Index() {
   const [name, setName] = useState('');
-  const [message, setMessage] = useState('');
+  const [checkInMessage, setCheckInMessage] = useState('');
+  const [players, setPlayers] = useState([
+    { name: 'Mikey', skill: 8 },
+    { name: 'Ashley', skill: 6 },
+  ]);
+  const [checkedInPlayers, setCheckedInPlayers] = useState<string[]>([]);
 
-  const checkIn = () => {
-    if (name.trim() === '') {
-      setMessage('Please enter your name.');
+  const checkInPlayer = () => {
+    const matched = players.find(p => p.name.toLowerCase() === name.trim().toLowerCase());
+    if (matched && !checkedInPlayers.includes(matched.name)) {
+      setCheckedInPlayers([...checkedInPlayers, matched.name]);
+      setCheckInMessage('You are checked in!');
     } else {
-      setMessage(`Welcome, ${name}! You are checked in.`);
-      setName('');
+      setCheckInMessage('Player not found.');
     }
+    setName('');
+    setTimeout(() => setCheckInMessage(''), 3000);
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>NLVB Player Check-In</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>NLVB Player Grouping App</Text>
+
       <TextInput
-        style={styles.input}
         placeholder="Enter your name"
-        placeholderTextColor="#aaa"
         value={name}
         onChangeText={setName}
+        style={styles.input}
       />
-      <Button title="Check In" onPress={checkIn} />
-      {message !== '' && <Text style={styles.message}>{message}</Text>}
-    </View>
+
+      <Button title="Check In" onPress={checkInPlayer} />
+
+      {checkInMessage ? <Text style={styles.message}>{checkInMessage}</Text> : null}
+
+      <Text style={styles.groupTitle}>Checked In Players:</Text>
+      {checkedInPlayers.map((player, idx) => (
+        <Text key={idx}>{player}</Text>
+      ))}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#111827',
     padding: 20,
-    justifyContent: 'center',
+    paddingTop: 50,
+    backgroundColor: '#111',
+    flexGrow: 1,
   },
   title: {
     fontSize: 24,
     color: 'white',
-    fontWeight: 'bold',
     marginBottom: 20,
-    textAlign: 'center',
+    fontWeight: 'bold',
   },
   input: {
     backgroundColor: '#fff',
     padding: 10,
-    marginBottom: 12,
-    borderRadius: 8,
+    borderRadius: 10,
+    marginBottom: 10,
   },
   message: {
-    color: '#4ade80',
+    color: 'lightgreen',
     marginTop: 10,
-    textAlign: 'center',
+  },
+  groupTitle: {
+    color: '#ccc',
+    marginTop: 20,
+    fontSize: 18,
   },
 });
