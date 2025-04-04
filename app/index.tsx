@@ -18,7 +18,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [groups, setGroups] = useState<Player[][]>([]);
-  const [numGroupsInput, setNumGroupsInput] = useState('2');
+  const [numGroups, setNumGroups] = useState(2);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -80,6 +80,14 @@ export default function App() {
     }
   };
 
+  const logoutAdmin = () => {
+    setIsAdmin(false);
+  };
+
+  const resetCheckIns = () => {
+    setCheckedInPlayers([]);
+  };
+
   const updatePlayer = (index: number) => {
     const newSkill = parseFloat(skill);
     if (!isNaN(newSkill)) {
@@ -91,9 +99,9 @@ export default function App() {
   };
 
   const distributeGroups = () => {
-    const numGroups = parseInt(numGroupsInput);
-    if (isNaN(numGroups) || numGroups <= 0) return;
-    const eligible = players.filter(p => checkedInPlayers.includes(p.name));
+    const eligible = players.filter(p =>
+      checkedInPlayers.includes(p.name)
+    );
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
     const teams: Player[][] = Array.from({ length: numGroups }, () => []);
     const totals = new Array(numGroups).fill(0);
@@ -106,17 +114,18 @@ export default function App() {
     setGroups(teams);
   };
 
-  const resetCheckins = () => setCheckedInPlayers([]);
-
-  const logout = () => setIsAdmin(false);
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <Text style={styles.header}>NLVB App</Text>
 
       {!isAdmin ? (
         <View>
-          <TextInput placeholder="Your name" style={styles.input} value={name} onChangeText={setName} />
+          <TextInput
+            placeholder="Your name"
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+          />
           <Button title="Check In" onPress={checkInPlayer} />
           <Button title="Register" onPress={registerPlayer} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
@@ -133,46 +142,56 @@ export default function App() {
         </View>
       ) : (
         <View>
-          <Text style={styles.subheader}>Admin Panel</Text>
+          {/* Section: Assign Skills */}
+          <View style={styles.sectionBox}>
+            <Text style={styles.sectionHeader}>Assign Skills</Text>
+            {players.map((p, i) => (
+              <View key={i} style={styles.playerRow}>
+                <Text>{p.name} (Skill: {p.skill})</Text>
+                <TextInput
+                  placeholder="Skill"
+                  keyboardType="numeric"
+                  style={styles.skillInput}
+                  onChangeText={setSkill}
+                />
+                <Button title="Update" onPress={() => updatePlayer(i)} />
+              </View>
+            ))}
+          </View>
 
-          <TextInput placeholder="Add player name" style={styles.input} value={name} onChangeText={setName} />
-          <TextInput placeholder="Skill" style={styles.input} value={skill} onChangeText={setSkill} keyboardType="numeric" />
-          <Button title="Add Player" onPress={registerPlayer} />
-          <Button title="Check In Player" onPress={checkInPlayer} />
-          <Button title="Reset All Check-Ins" onPress={resetCheckins} color="red" />
-          <Button title="Logout" onPress={logout} color="gray" />
+          {/* Section: Group Settings */}
+          <View style={styles.sectionBox}>
+            <Text style={styles.sectionHeader}>Group Settings</Text>
+            <TextInput
+              placeholder="Number of Groups"
+              keyboardType="numeric"
+              value={numGroups.toString()}
+              onChangeText={(v) => setNumGroups(Number(v))}
+              style={styles.input}
+            />
+            <Button title="Generate Groups" onPress={distributeGroups} />
+          </View>
 
-          {players.map((p, i) => (
-            <View key={i} style={styles.playerRow}>
-              <Text>{p.name} (Skill: {p.skill})</Text>
-              <TextInput
-                placeholder="Skill"
-                keyboardType="numeric"
-                style={styles.skillInput}
-                onChangeText={setSkill}
-              />
-              <Button title="Update" onPress={() => updatePlayer(i)} />
+          {/* Section: Generated Groups */}
+          <View style={styles.sectionBox}>
+            <Text style={styles.sectionHeader}>Generated Groups</Text>
+            {groups.map((g, i) => (
+              <View key={i} style={styles.groupBox}>
+                <Text style={styles.groupTitle}>Group {i + 1}</Text>
+                {g.map((p, j) => (
+                  <Text key={j}>{p.name} (Skill: {p.skill})</Text>
+                ))}
+              </View>
+            ))}
+          </View>
+
+          {/* Section: Admin Actions */}
+          <View style={styles.sectionBox}>
+            <Button title="Reset All Check-ins" onPress={resetCheckIns} />
+            <View style={{ marginTop: 10 }}>
+              <Button title="Logout" onPress={logoutAdmin} color="#cc0000" />
             </View>
-          ))}
-
-          <Text style={styles.label}>Number of Groups:</Text>
-          <TextInput
-            placeholder="Enter number of groups"
-            value={numGroupsInput}
-            onChangeText={setNumGroupsInput}
-            keyboardType="numeric"
-            style={styles.input}
-          />
-          <Button title="Generate Groups" onPress={distributeGroups} />
-
-          {groups.map((g, i) => (
-            <View key={i} style={styles.groupBox}>
-              <Text style={styles.groupTitle}>Group {i + 1}</Text>
-              {g.map((p, j) => (
-                <Text key={j}>{p.name} (Skill: {p.skill})</Text>
-              ))}
-            </View>
-          ))}
+          </View>
         </View>
       )}
     </ScrollView>
@@ -197,11 +216,20 @@ const styles = StyleSheet.create({
     borderWidth: 1, marginVertical: 5, padding: 5, borderRadius: 5, backgroundColor: '#fff'
   },
   label: { marginTop: 20 },
+  picker: { backgroundColor: '#fff', marginBottom: 10 },
   groupBox: {
-    marginTop: 10,
-    padding: 8,
+    marginTop: 15,
+    padding: 10,
     backgroundColor: '#f2f2f2',
     borderRadius: 8
   },
   groupTitle: { fontWeight: 'bold', marginBottom: 5 },
+  sectionHeader: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  sectionBox: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 20,
+    elevation: 2
+  }
 });
