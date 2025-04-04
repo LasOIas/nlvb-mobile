@@ -1,28 +1,36 @@
-// File: app/groups.tsx
+// File: app/index.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, StyleSheet, FlatList, TextInput } from 'react-native';
+import {
+  View, Text, TextInput, Button, FlatList, StyleSheet, Alert, TouchableOpacity, ScrollView
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
 
-export default function GroupsScreen() {
-  const [players, setPlayers] = useState<any[]>([]);
-  const [checkedIn, setCheckedIn] = useState<string[]>([]);
-  const [groups, setGroups] = useState<any[][]>([]);
-  const [numGroups, setNumGroups] = useState(2);
+interface Player {
+  name: string;
+  skill: number;
+}
+
+export default function App() {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [checkedInPlayers, setCheckedInPlayers] = useState<string[]>([]);
   const [name, setName] = useState('');
-  const [checkInMessage, setCheckInMessage] = useState('');
-  const [newPlayerName, setNewPlayerName] = useState('');
-  const [registrationMessage, setRegistrationMessage] = useState('');
+  const [skill, setSkill] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminCode, setAdminCode] = useState('');
+  const [groups, setGroups] = useState<Player[][]>([]);
+  const [numGroups, setNumGroups] = useState(2);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
-      const storedPlayers = await AsyncStorage.getItem('players');
-      const storedCheckins = await AsyncStorage.getItem('checkedInPlayers');
-      const parsedPlayers = storedPlayers ? JSON.parse(storedPlayers) : [];
-      const parsedCheckins = storedCheckins ? JSON.parse(storedCheckins) : [];
+      const savedPlayers = await AsyncStorage.getItem('players');
+      const savedCheckins = await AsyncStorage.getItem('checkedInPlayers');
+      const parsedPlayers = savedPlayers ? JSON.parse(savedPlayers) : [];
+      const parsedCheckins = savedCheckins ? JSON.parse(savedCheckins) : [];
       setPlayers(parsedPlayers);
-      setCheckedIn(parsedCheckins);
+      setCheckedInPlayers(parsedCheckins);
     };
-
     loadData();
   }, []);
 
@@ -31,123 +39,168 @@ export default function GroupsScreen() {
   }, [players]);
 
   useEffect(() => {
-    AsyncStorage.setItem('checkedInPlayers', JSON.stringify(checkedIn));
-  }, [checkedIn]);
+    AsyncStorage.setItem('checkedInPlayers', JSON.stringify(checkedInPlayers));
+  }, [checkedInPlayers]);
 
-  const normalize = (s: string) => s.trim().toLowerCase();
+  const normalize = (str: string) => str.trim().toLowerCase();
 
   const checkInPlayer = () => {
-    const inputName = name.trim();
-    if (!inputName) return;
-    const lowerInput = normalize(inputName);
-    const matchedPlayer = players.find(p => normalize(p.name) === lowerInput);
-
-    if (matchedPlayer) {
-      if (!checkedIn.some(c => normalize(c) === lowerInput)) {
-        setCheckedIn(prev => [...prev, matchedPlayer.name]);
-        setCheckInMessage('You are checked in');
-      }
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const match = players.find(p => normalize(p.name) === normalize(trimmed));
+    if (match && !checkedInPlayers.includes(match.name)) {
+      setCheckedInPlayers([...checkedInPlayers, match.name]);
+      setMessage('Checked in');
     } else {
-      setCheckInMessage('Player not found in history');
+      setMessage('Player not found');
     }
-
-    setTimeout(() => setCheckInMessage(''), 3000);
     setName('');
+    setTimeout(() => setMessage(''), 2000);
   };
 
-  const registerNewPlayer = () => {
-    const trimmedName = newPlayerName.trim();
-    if (!trimmedName) return;
-
-    const exists = players.some(p => normalize(p.name) === normalize(trimmedName));
-    if (exists) {
-      setRegistrationMessage('Player already registered.');
+  const registerPlayer = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const exists = players.some(p => normalize(p.name) === normalize(trimmed));
+    if (!exists) {
+      setPlayers([...players, { name: trimmed, skill: 0 }]);
+      setMessage('Registered. Waiting for admin to set skill.');
     } else {
-      setPlayers(prev => [...prev, { name: trimmedName, skill: 0 }]);
-      setRegistrationMessage('Player registered. Waiting for admin to assign skill.');
+      setMessage('Player already exists');
     }
-
-    setTimeout(() => setRegistrationMessage(''), 3000);
-    setNewPlayerName('');
+    setName('');
+    setTimeout(() => setMessage(''), 2000);
   };
 
-  const distribute = () => {
-    const teamCount = Number(numGroups) || 2;
-    if (!players.length || !checkedIn.length || teamCount <= 0) return;
+  const loginAdmin = () => {
+    if (adminCode === 'nlvb2025') {
+      setIsAdmin(true);
+      setAdminCode('');
+    } else {
+      Alert.alert('Incorrect admin code');
+    }
+  };
 
+  const updatePlayer = (index: number) => {
+    const newSkill = parseFloat(skill);
+    if (!isNaN(newSkill)) {
+      const updated = [...players];
+      updated[index].skill = newSkill;
+      setPlayers(updated);
+      setSkill('');
+    }
+  };
+
+  const distributeGroups = () => {
     const eligible = players.filter(p =>
-      checkedIn.some(c => normalize(c) === normalize(p.name))
+      checkedInPlayers.includes(p.name)
     );
-
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teams: { name: string; skill: number }[][] = Array.from({ length: teamCount }, () => []);
-    const totals = new Array(teamCount).fill(0);
+    const teams: Player[][] = Array.from({ length: numGroups }, () => []);
+    const totals = new Array(numGroups).fill(0);
 
     for (const p of sorted) {
-      let minIndex = 0;
-      for (let i = 1; i < teamCount; i++) {
-        if (totals[i] < totals[minIndex]) minIndex = i;
-      }
-      teams[minIndex].push(p);
-      totals[minIndex] += p.skill;
+      const index = totals.indexOf(Math.min(...totals));
+      teams[index].push(p);
+      totals[index] += p.skill;
     }
-
     setGroups(teams);
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>NLVB Player Grouping App</Text>
+    <ScrollView style={styles.container}>
+      <Text style={styles.header}>NLVB App</Text>
 
-      <Text style={styles.subTitle}>Check-In</Text>
-      <TextInput
-        value={name}
-        onChangeText={setName}
-        placeholder="Enter your name"
-        style={styles.input}
-      />
-      <Button title="Check In" onPress={checkInPlayer} />
-      {!!checkInMessage && <Text style={styles.message}>{checkInMessage}</Text>}
+      {!isAdmin ? (
+        <View>
+          <TextInput
+            placeholder="Your name"
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+          />
+          <Button title="Check In" onPress={checkInPlayer} />
+          <Button title="Register" onPress={registerPlayer} />
+          {message ? <Text style={styles.message}>{message}</Text> : null}
 
-      <Text style={styles.subTitle}>New Player Registration</Text>
-      <TextInput
-        value={newPlayerName}
-        onChangeText={setNewPlayerName}
-        placeholder="Your name"
-        style={styles.input}
-      />
-      <Button title="Register" onPress={registerNewPlayer} />
-      {!!registrationMessage && <Text style={styles.message}>{registrationMessage}</Text>}
+          <Text style={styles.subheader}>Admin Login</Text>
+          <TextInput
+            placeholder="Admin code"
+            style={styles.input}
+            secureTextEntry
+            value={adminCode}
+            onChangeText={setAdminCode}
+          />
+          <Button title="Login as Admin" onPress={loginAdmin} />
+        </View>
+      ) : (
+        <View>
+          <Text style={styles.subheader}>Admin Panel</Text>
 
-      <Button title="Generate Groups" onPress={distribute} />
+          {players.map((p, i) => (
+            <View key={i} style={styles.playerRow}>
+              <Text>{p.name} (Skill: {p.skill})</Text>
+              <TextInput
+                placeholder="Skill"
+                keyboardType="numeric"
+                style={styles.skillInput}
+                onChangeText={setSkill}
+              />
+              <Button title="Update" onPress={() => updatePlayer(i)} />
+            </View>
+          ))}
 
-      <FlatList
-        data={groups}
-        keyExtractor={(_, index) => index.toString()}
-        renderItem={({ item, index }) => {
-          const totalSkill = item.reduce((sum, p) => sum + p.skill, 0);
-          return (
-            <View style={styles.group}>
-              <Text style={styles.groupTitle}>
-                Group {index + 1} ({item.length} players, Total Skill: {totalSkill})
-              </Text>
-              {item.map((p, i) => (
-                <Text key={i}>{p.name} (Skill: {p.skill})</Text>
+          <Text style={styles.label}>Groups:</Text>
+          <Picker
+            selectedValue={numGroups}
+            onValueChange={(v) => setNumGroups(v)}
+            style={styles.picker}
+          >
+            {[...Array(10)].map((_, i) => (
+              <Picker.Item key={i + 1} label={`${i + 1}`} value={i + 1} />
+            ))}
+          </Picker>
+
+          <Button title="Generate Groups" onPress={distributeGroups} />
+
+          {groups.map((g, i) => (
+            <View key={i} style={styles.groupBox}>
+              <Text style={styles.groupTitle}>Group {i + 1}</Text>
+              {g.map((p, j) => (
+                <Text key={j}>{p.name} (Skill: {p.skill})</Text>
               ))}
             </View>
-          );
-        }}
-      />
-    </View>
+          ))}
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
-  subTitle: { fontSize: 18, fontWeight: 'bold', marginTop: 20, marginBottom: 10 },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 8, marginBottom: 10, borderRadius: 6 },
-  message: { color: 'green', marginTop: 5, marginBottom: 10 },
-  group: { marginTop: 20, padding: 10, backgroundColor: '#f0f0f0', borderRadius: 10 },
+  container: { flex: 1, padding: 16 },
+  header: { fontSize: 26, fontWeight: 'bold', marginBottom: 20 },
+  input: {
+    borderWidth: 1, padding: 8, marginBottom: 10, borderRadius: 5, backgroundColor: '#fff'
+  },
+  subheader: { fontSize: 20, marginTop: 20 },
+  message: { marginTop: 10, color: 'green' },
+  playerRow: {
+    marginTop: 10,
+    backgroundColor: '#eee',
+    padding: 10,
+    borderRadius: 6
+  },
+  skillInput: {
+    borderWidth: 1, marginVertical: 5, padding: 5, borderRadius: 5, backgroundColor: '#fff'
+  },
+  label: { marginTop: 20 },
+  picker: { backgroundColor: '#fff', marginBottom: 10 },
+  groupBox: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#f2f2f2',
+    borderRadius: 8
+  },
   groupTitle: { fontWeight: 'bold', marginBottom: 5 },
 });
