@@ -1,7 +1,7 @@
 // File: app/index.tsx
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, Button, FlatList, StyleSheet, Alert, ScrollView, TouchableOpacity
+  View, Text, TextInput, Button, FlatList, StyleSheet, Alert, ScrollView
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
@@ -15,12 +15,11 @@ export default function App() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [checkedInPlayers, setCheckedInPlayers] = useState<string[]>([]);
   const [name, setName] = useState('');
-  const [newPlayer, setNewPlayer] = useState('');
   const [skill, setSkill] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [groups, setGroups] = useState<Player[][]>([]);
-  const [numGroups, setNumGroups] = useState(2);
+  const [numGroups, setNumGroups] = useState<number>(2);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -45,10 +44,18 @@ export default function App() {
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
-  const checkInPlayer = (playerName: string) => {
-    if (!checkedInPlayers.includes(playerName)) {
-      setCheckedInPlayers([...checkedInPlayers, playerName]);
+  const checkInPlayer = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const match = players.find(p => normalize(p.name) === normalize(trimmed));
+    if (match && !checkedInPlayers.includes(match.name)) {
+      setCheckedInPlayers([...checkedInPlayers, match.name]);
+      setMessage('Checked in');
+    } else {
+      setMessage('Player not found');
     }
+    setName('');
+    setTimeout(() => setMessage(''), 2000);
   };
 
   const registerPlayer = () => {
@@ -65,18 +72,6 @@ export default function App() {
     setTimeout(() => setMessage(''), 2000);
   };
 
-  const addNewPlayer = () => {
-    const trimmed = newPlayer.trim();
-    if (!trimmed) return;
-    const exists = players.some(p => normalize(p.name) === normalize(trimmed));
-    if (!exists) {
-      setPlayers([...players, { name: trimmed, skill: 0 }]);
-    } else {
-      Alert.alert('Player already exists');
-    }
-    setNewPlayer('');
-  };
-
   const loginAdmin = () => {
     if (adminCode === 'nlvb2025') {
       setIsAdmin(true);
@@ -86,19 +81,20 @@ export default function App() {
     }
   };
 
-  const updatePlayer = (index: number, newSkill: string) => {
-    const skillValue = parseFloat(newSkill);
-    if (!isNaN(skillValue)) {
+  const updatePlayer = (index: number) => {
+    const newSkill = parseFloat(skill);
+    if (!isNaN(newSkill)) {
       const updated = [...players];
-      updated[index].skill = skillValue;
+      updated[index].skill = newSkill;
       setPlayers(updated);
+      setSkill('');
     }
   };
 
   const distributeGroups = () => {
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teamCount = Math.max(1, numGroups);
+    const teamCount = Math.max(1, Math.min(numGroups, 10));
     const teams: Player[][] = Array.from({ length: teamCount }, () => []);
     const totals = new Array(teamCount).fill(0);
 
@@ -110,17 +106,8 @@ export default function App() {
     setGroups(teams);
   };
 
-  const resetCheckIns = () => {
-    setCheckedInPlayers([]);
-  };
-
-  const logout = () => {
-    setIsAdmin(false);
-    setAdminCode('');
-  };
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 60 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <Text style={styles.header}>NLVB App</Text>
 
       {!isAdmin ? (
@@ -131,7 +118,7 @@ export default function App() {
             value={name}
             onChangeText={setName}
           />
-          <Button title="Check In" onPress={() => checkInPlayer(name)} />
+          <Button title="Check In" onPress={checkInPlayer} />
           <Button title="Register" onPress={registerPlayer} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
 
@@ -149,25 +136,16 @@ export default function App() {
         <View>
           <Text style={styles.subheader}>Admin Panel</Text>
 
-          <TextInput
-            placeholder="New player name"
-            style={styles.input}
-            value={newPlayer}
-            onChangeText={setNewPlayer}
-          />
-          <Button title="Add Player" onPress={addNewPlayer} />
-
           {players.map((p, i) => (
             <View key={i} style={styles.playerRow}>
               <Text>{p.name} (Skill: {p.skill})</Text>
-              <Button title="Check-In" onPress={() => checkInPlayer(p.name)} />
               <TextInput
-                placeholder="New Skill"
+                placeholder="Skill"
                 keyboardType="numeric"
                 style={styles.skillInput}
-                onChangeText={(val) => updatePlayer(i, val)}
+                onChangeText={setSkill}
               />
-              <Button title="Update" onPress={() => updatePlayer(i, skill)} />
+              <Button title="Update" onPress={() => updatePlayer(i)} />
             </View>
           ))}
 
@@ -182,9 +160,7 @@ export default function App() {
             ))}
           </Picker>
 
-          <Button title="Generate Groups" onPress={distributeGroups} color="dodgerblue" />
-          <Button title="Reset All Check-Ins" onPress={resetCheckIns} color="orange" />
-          <Button title="Logout" onPress={logout} color="red" />
+          <Button title="Generate Groups" onPress={distributeGroups} />
 
           {groups.map((g, i) => (
             <View key={i} style={styles.groupBox}>
