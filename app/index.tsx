@@ -16,6 +16,8 @@ export default function App() {
   const [checkedInPlayers, setCheckedInPlayers] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [skill, setSkill] = useState('');
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [newPlayerSkill, setNewPlayerSkill] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [groups, setGroups] = useState<Player[][]>([]);
@@ -81,6 +83,34 @@ export default function App() {
     }
   };
 
+  const logoutAdmin = () => {
+    setIsAdmin(false);
+  };
+
+  const resetCheckIns = () => {
+    setCheckedInPlayers([]);
+  };
+
+  const addNewPlayer = () => {
+    const trimmed = newPlayerName.trim();
+    const parsedSkill = parseFloat(newPlayerSkill);
+    if (!trimmed || isNaN(parsedSkill)) return;
+    const exists = players.some(p => normalize(p.name) === normalize(trimmed));
+    if (!exists) {
+      setPlayers([...players, { name: trimmed, skill: parsedSkill }]);
+      setNewPlayerName('');
+      setNewPlayerSkill('');
+    }
+  };
+
+  const toggleCheckIn = (name: string) => {
+    if (checkedInPlayers.includes(name)) {
+      setCheckedInPlayers(checkedInPlayers.filter(n => n !== name));
+    } else {
+      setCheckedInPlayers([...checkedInPlayers, name]);
+    }
+  };
+
   const updatePlayer = (index: number) => {
     const newSkill = parseFloat(skill);
     if (!isNaN(newSkill)) {
@@ -137,6 +167,21 @@ export default function App() {
         <View>
           <Text style={styles.subheader}>Admin Panel</Text>
 
+          <TextInput
+            placeholder="New player name"
+            style={styles.input}
+            value={newPlayerName}
+            onChangeText={setNewPlayerName}
+          />
+          <TextInput
+            placeholder="Skill"
+            style={styles.input}
+            keyboardType="numeric"
+            value={newPlayerSkill}
+            onChangeText={setNewPlayerSkill}
+          />
+          <Button title="Add Player" onPress={addNewPlayer} />
+
           {players.map((p, i) => (
             <View key={i} style={styles.playerRow}>
               <Text>{p.name} (Skill: {p.skill})</Text>
@@ -147,6 +192,7 @@ export default function App() {
                 onChangeText={setSkill}
               />
               <Button title="Update" onPress={() => updatePlayer(i)} />
+              <Button title={checkedInPlayers.includes(p.name) ? 'Uncheck' : 'Check In'} onPress={() => toggleCheckIn(p.name)} />
             </View>
           ))}
 
@@ -162,6 +208,8 @@ export default function App() {
           </Picker>
 
           <Button title="Generate Groups" onPress={distributeGroups} />
+          <Button title="Reset Check-Ins" onPress={resetCheckIns} color="orange" />
+          <Button title="Logout Admin" onPress={logoutAdmin} color="red" />
 
           {groups.map((g, i) => (
             <View key={i} style={styles.groupBox}>
