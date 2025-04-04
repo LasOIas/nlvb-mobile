@@ -1,121 +1,72 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+// File: app/(tabs)/checkin.tsx
+import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const CheckInScreen = () => {
+export default function CheckInScreen() {
   const [name, setName] = useState('');
-  const [players, setPlayers] = useState<string[]>([]);
-  const [checkedInPlayers, setCheckedInPlayers] = useState<string[]>([]);
-  const [checkInMessage, setCheckInMessage] = useState('');
-
-  useEffect(() => {
-    loadPlayers();
-    loadCheckedIn();
-  }, []);
+  const [message, setMessage] = useState('');
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
-  const loadPlayers = async () => {
+  const checkInPlayer = async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+
     try {
-      const stored = await AsyncStorage.getItem('players');
-      if (stored) {
-        setPlayers(JSON.parse(stored));
-      }
-    } catch (err) {
-      console.error('Failed to load players:', err);
-    }
-  };
+      const playersRaw = await AsyncStorage.getItem('players');
+      const checkedInRaw = await AsyncStorage.getItem('checkedInPlayers');
+      const players = playersRaw ? JSON.parse(playersRaw) : [];
+      const checkedInPlayers = checkedInRaw ? JSON.parse(checkedInRaw) : [];
 
-  const loadCheckedIn = async () => {
-    try {
-      const stored = await AsyncStorage.getItem('checkedInPlayers');
-      if (stored) {
-        setCheckedInPlayers(JSON.parse(stored));
-      }
-    } catch (err) {
-      console.error('Failed to load check-ins:', err);
-    }
-  };
+      const match = players.find((p: any) => normalize(p.name) === normalize(trimmedName));
 
-  const saveCheckedIn = async (updatedList: string[]) => {
-    await AsyncStorage.setItem('checkedInPlayers', JSON.stringify(updatedList));
-    setCheckedInPlayers(updatedList);
-  };
+      if (match) {
+        const alreadyChecked = checkedInPlayers.some(
+          (n: string) => normalize(n) === normalize(trimmedName)
+        );
 
-  const checkInPlayer = () => {
-    const inputName = name.trim();
-    if (!inputName) return;
-
-    const lowerInput = normalize(inputName);
-    const found = players.find((p) => normalize(p) === lowerInput);
-
-    if (found) {
-      if (!checkedInPlayers.includes(found)) {
-        const updated = [...checkedInPlayers, found];
-        saveCheckedIn(updated);
-        setCheckInMessage('You are checked in');
+        if (!alreadyChecked) {
+          checkedInPlayers.push(match.name);
+          await AsyncStorage.setItem('checkedInPlayers', JSON.stringify(checkedInPlayers));
+        }
+        setMessage('You are checked in!');
       } else {
-        setCheckInMessage('You are already checked in');
+        setMessage('Player not found. Please register first.');
       }
-    } else {
-      setCheckInMessage('Player not found in history');
-    }
 
-    setTimeout(() => setCheckInMessage(''), 3000);
-    setName('');
+      setName('');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      console.error('Check-in error:', error);
+      setMessage('Something went wrong.');
+    }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Text style={styles.title}>Check-In</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Check In</Text>
       <TextInput
         style={styles.input}
-        placeholder="Enter your name"
         value={name}
         onChangeText={setName}
+        placeholder="Enter your name"
       />
       <Button title="Check In" onPress={checkInPlayer} />
-      {checkInMessage !== '' && <Text style={styles.message}>{checkInMessage}</Text>}
-    </KeyboardAvoidingView>
+      {message ? <Text style={styles.message}>{message}</Text> : null}
+    </View>
   );
-};
-
-export default CheckInScreen;
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#0f172a', // Tailwind gray-900
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 24,
-    color: 'white',
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
+  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
+  title: { fontSize: 20, marginBottom: 10 },
   input: {
-    backgroundColor: 'white',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 5,
   },
-  message: {
-    marginTop: 10,
-    color: '#22c55e', // Tailwind green-500
-    fontWeight: '600',
-  },
+  message: { marginTop: 10, color: 'green' },
 });
