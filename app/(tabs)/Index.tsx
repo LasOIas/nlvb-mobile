@@ -1,11 +1,10 @@
 // File: app/index.tsx
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, Button, FlatList, StyleSheet, Alert, TouchableOpacity, ScrollView
+  View, Text, TextInput, Button, FlatList, StyleSheet, Alert, ScrollView
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
-import { useColorScheme } from 'react-native';
 
 interface Player {
   name: string;
@@ -13,9 +12,6 @@ interface Player {
 }
 
 export default function App() {
-  const systemTheme = useColorScheme();
-  const [theme, setTheme] = useState(systemTheme || 'light');
-
   const [players, setPlayers] = useState<Player[]>([]);
   const [checkedInPlayers, setCheckedInPlayers] = useState<string[]>([]);
   const [name, setName] = useState('');
@@ -111,16 +107,9 @@ export default function App() {
     setGroups(teams);
   };
 
-  const backgroundColor = theme === 'dark' ? '#2E3440' : '#ffffff';
-
   return (
-    <ScrollView style={[styles.container, { backgroundColor }]}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <Text style={styles.header}>NLVB App</Text>
-
-      <Button
-        title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-        onPress={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      />
 
       {!isAdmin ? (
         <View>
@@ -189,7 +178,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
   header: { fontSize: 26, fontWeight: 'bold', marginBottom: 20 },
   input: {
     borderWidth: 1, padding: 8, marginBottom: 10, borderRadius: 5, backgroundColor: '#fff'
