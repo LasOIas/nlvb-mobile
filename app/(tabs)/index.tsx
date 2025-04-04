@@ -60,14 +60,19 @@ export default function App() {
 
   const registerPlayer = () => {
     const trimmed = name.trim();
+    console.log("Trying to register:", trimmed);
     if (!trimmed) return;
+
     const exists = players.some(p => normalize(p.name) === normalize(trimmed));
     if (!exists) {
-      setPlayers([...players, { name: trimmed, skill: 0 }]);
+      const newPlayer = { name: trimmed, skill: 0 };
+      setPlayers(prev => [...prev, newPlayer]);
       setMessage('Registered. Waiting for admin to set skill.');
+      console.log("Registered new player:", newPlayer);
     } else {
       setMessage('Player already exists');
     }
+
     setName('');
     setTimeout(() => setMessage(''), 2000);
   };
