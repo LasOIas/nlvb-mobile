@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
+import { useColorScheme } from 'react-native';
 
 interface Player {
   name: string;
@@ -12,6 +13,9 @@ interface Player {
 }
 
 export default function App() {
+  const systemTheme = useColorScheme();
+  const [theme, setTheme] = useState(systemTheme || 'light');
+
   const [players, setPlayers] = useState<Player[]>([]);
   const [checkedInPlayers, setCheckedInPlayers] = useState<string[]>([]);
   const [name, setName] = useState('');
@@ -60,19 +64,14 @@ export default function App() {
 
   const registerPlayer = () => {
     const trimmed = name.trim();
-    console.log("Trying to register:", trimmed);
     if (!trimmed) return;
-
     const exists = players.some(p => normalize(p.name) === normalize(trimmed));
     if (!exists) {
-      const newPlayer = { name: trimmed, skill: 0 };
-      setPlayers(prev => [...prev, newPlayer]);
+      setPlayers([...players, { name: trimmed, skill: 0 }]);
       setMessage('Registered. Waiting for admin to set skill.');
-      console.log("Registered new player:", newPlayer);
     } else {
       setMessage('Player already exists');
     }
-
     setName('');
     setTimeout(() => setMessage(''), 2000);
   };
@@ -112,9 +111,16 @@ export default function App() {
     setGroups(teams);
   };
 
+  const backgroundColor = theme === 'dark' ? '#121212' : '#ffffff';
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor }]}>
       <Text style={styles.header}>NLVB App</Text>
+
+      <Button
+        title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+        onPress={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      />
 
       {!isAdmin ? (
         <View>
