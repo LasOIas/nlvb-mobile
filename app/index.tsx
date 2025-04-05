@@ -206,7 +206,9 @@ export default function App() {
               {players.map((p, i) => (
                 <View key={i} style={styles.playerRow}>
                   <TouchableOpacity onPress={() => togglePlayerExpand(i)}>
-                    <Text>{p.name} (Skill: {p.skill})</Text>
+                    <Text>
+                      {p.name} {checkedInPlayers.includes(p.name) ? '✅' : ''} (Skill: {p.skill})
+                    </Text>
                   </TouchableOpacity>
 
                   {expandedPlayer === i && (
