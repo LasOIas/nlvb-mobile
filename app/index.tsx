@@ -1,7 +1,14 @@
 // File: app/index.tsx
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity
+  View,
+  Text,
+  TextInput,
+  Button,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
@@ -19,13 +26,12 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [groups, setGroups] = useState<Player[][]>([]);
-  const [numGroups, setNumGroups] = useState('2');
+  const [numGroups, setNumGroups] = useState(2);
   const [message, setMessage] = useState('');
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null);
   const [editModeIndex, setEditModeIndex] = useState<number | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editSkill, setEditSkill] = useState('');
-  const [activeTab, setActiveTab] = useState<'players' | 'settings'>('players');
+  const [editedName, setEditedName] = useState('');
+  const [editedSkill, setEditedSkill] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -86,44 +92,33 @@ export default function App() {
     }
   };
 
-  const toggleExpand = (index: number) => {
-    setExpandedIndex(expandedIndex === index ? null : index);
-    setEditModeIndex(null);
+  const logoutAdmin = () => {
+    setIsAdmin(false);
   };
 
-  const handleEdit = (index: number) => {
-    setEditModeIndex(index);
-    setEditName(players[index].name);
-    setEditSkill(players[index].skill.toString());
+  const resetCheckIns = () => {
+    setCheckedInPlayers([]);
   };
 
-  const saveEdit = (index: number) => {
+  const updatePlayer = (index: number) => {
+    const trimmedName = editedName.trim();
+    const newSkill = parseFloat(editedSkill);
+    if (!trimmedName || isNaN(newSkill)) return;
     const updated = [...players];
-    updated[index] = { name: editName, skill: parseFloat(editSkill) || 0 };
+    updated[index] = { name: trimmedName, skill: newSkill };
     setPlayers(updated);
     setEditModeIndex(null);
-  };
-
-  const removePlayer = (index: number) => {
-    const updated = players.filter((_, i) => i !== index);
-    setPlayers(updated);
-    setCheckedInPlayers(prev => prev.filter(n => n !== players[index].name));
-    setExpandedIndex(null);
-  };
-
-  const checkInFromAdmin = (name: string) => {
-    if (!checkedInPlayers.includes(name)) {
-      setCheckedInPlayers([...checkedInPlayers, name]);
-    }
+    setEditedName('');
+    setEditedSkill('');
   };
 
   const distributeGroups = () => {
-    const count = parseInt(numGroups);
-    if (!count || count <= 0) return;
-    const eligible = players.filter(p => checkedInPlayers.includes(p.name));
+    const eligible = players.filter(p =>
+      checkedInPlayers.includes(p.name)
+    );
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teams: Player[][] = Array.from({ length: count }, () => []);
-    const totals = new Array(count).fill(0);
+    const teams: Player[][] = Array.from({ length: numGroups }, () => []);
+    const totals = new Array(numGroups).fill(0);
 
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
@@ -133,92 +128,110 @@ export default function App() {
     setGroups(teams);
   };
 
-  const resetCheckIns = () => setCheckedInPlayers([]);
-  const logoutAdmin = () => setIsAdmin(false);
+  const togglePlayerExpand = (index: number) => {
+    setExpandedPlayer(expandedPlayer === index ? null : index);
+    setEditModeIndex(null);
+  };
+
+  const removePlayer = (index: number) => {
+    const updated = players.filter((_, i) => i !== index);
+    setPlayers(updated);
+  };
+
+  const checkInFromAdmin = (name: string) => {
+    if (!checkedInPlayers.includes(name)) {
+      setCheckedInPlayers([...checkedInPlayers, name]);
+    }
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <View style={styles.headerRow}>
-        <Text style={styles.header}>NLVB App</Text>
-        {isAdmin && (
-          <View style={styles.badge}><Text style={styles.badgeText}>{checkedInPlayers.length}</Text></View>
-        )}
-      </View>
+      <Text style={styles.header}>NLVB App</Text>
+      <Text style={styles.subheader}>Checked-in: {checkedInPlayers.length}</Text>
 
       {!isAdmin ? (
         <View>
-          <TextInput placeholder="Your name" style={styles.input} value={name} onChangeText={setName} />
+          <TextInput
+            placeholder="Your name"
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+          />
           <Button title="Check In" onPress={checkInPlayer} />
           <Button title="Register" onPress={registerPlayer} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
 
           <Text style={styles.subheader}>Admin Login</Text>
-          <TextInput placeholder="Admin code" style={styles.input} secureTextEntry value={adminCode} onChangeText={setAdminCode} />
+          <TextInput
+            placeholder="Admin code"
+            style={styles.input}
+            secureTextEntry
+            value={adminCode}
+            onChangeText={setAdminCode}
+          />
           <Button title="Login as Admin" onPress={loginAdmin} />
         </View>
       ) : (
         <View>
-          <View style={styles.tabRow}>
-            <TouchableOpacity onPress={() => setActiveTab('players')} style={[styles.tab, activeTab === 'players' && styles.activeTab]}>
-              <Text>Players</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setActiveTab('settings')} style={[styles.tab, activeTab === 'settings' && styles.activeTab]}>
-              <Text>Settings</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.subheader}>Players</Text>
+          {players.map((p, i) => (
+            <View key={i} style={styles.playerRow}>
+              <TouchableOpacity onPress={() => togglePlayerExpand(i)}>
+                <Text>{p.name} (Skill: {p.skill})</Text>
+              </TouchableOpacity>
 
-          {activeTab === 'players' && (
-            <View>
-              <Text style={styles.subheader}>Players</Text>
-              {players.map((p, i) => (
-                <View key={i} style={styles.playerBox}>
-                  <TouchableOpacity onPress={() => toggleExpand(i)}>
-                    <Text>{p.name} (Skill: {p.skill})</Text>
-                  </TouchableOpacity>
-                  {expandedIndex === i && (
-                    <View style={styles.inlineBtns}>
-                      <Button title="Check In" onPress={() => checkInFromAdmin(p.name)} color="green" />
-                      <Button title="Edit" onPress={() => handleEdit(i)} color="blue" />
-                      <Button title="Delete" onPress={() => removePlayer(i)} color="red" />
-                    </View>
-                  )}
-                  {editModeIndex === i && (
-                    <View>
-                      <TextInput value={editName} onChangeText={setEditName} placeholder="Name" style={styles.input} />
-                      <TextInput value={editSkill} onChangeText={setEditSkill} placeholder="Skill" style={styles.input} keyboardType="numeric" />
-                      <Button title="Save" onPress={() => saveEdit(i)} />
-                    </View>
-                  )}
+              {expandedPlayer === i && (
+                <View style={styles.actionsRow}>
+                  <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.name)} />
+                  <Button title="Edit" color="#2196F3" onPress={() => setEditModeIndex(i)} />
+                  <Button title="Delete" color="#f44336" onPress={() => removePlayer(i)} />
                 </View>
+              )}
+
+              {editModeIndex === i && (
+                <View>
+                  <TextInput
+                    placeholder="Name"
+                    value={editedName}
+                    style={styles.input}
+                    onChangeText={setEditedName}
+                  />
+                  <TextInput
+                    placeholder="Skill"
+                    keyboardType="numeric"
+                    value={editedSkill}
+                    style={styles.input}
+                    onChangeText={setEditedSkill}
+                  />
+                  <Button title="Save" onPress={() => updatePlayer(i)} />
+                </View>
+              )}
+            </View>
+          ))}
+
+          <Text style={styles.subheader}>Group Settings</Text>
+          <TextInput
+            placeholder="Number of Groups"
+            keyboardType="numeric"
+            value={numGroups.toString()}
+            onChangeText={(v) => setNumGroups(parseInt(v) || 2)}
+            style={styles.input}
+          />
+          <Button title="Generate Groups" onPress={distributeGroups} />
+
+          <Text style={styles.subheader}>Generated Groups</Text>
+          {groups.map((g, i) => (
+            <View key={i} style={styles.groupBox}>
+              <Text style={styles.groupTitle}>Group {i + 1}</Text>
+              {g.map((p, j) => (
+                <Text key={j}>{p.name} (Skill: {p.skill})</Text>
               ))}
             </View>
-          )}
+          ))}
 
-          {activeTab === 'settings' && (
-            <View>
-              <Text style={styles.subheader}>Group Settings</Text>
-              <TextInput
-                placeholder="Number of Groups"
-                value={numGroups}
-                onChangeText={setNumGroups}
-                keyboardType="numeric"
-                style={styles.input}
-              />
-              <Button title="Generate Groups" onPress={distributeGroups} />
-
-              {groups.map((g, i) => (
-                <View key={i} style={styles.groupBox}>
-                  <Text style={styles.groupTitle}>Group {i + 1}</Text>
-                  {g.map((p, j) => (
-                    <Text key={j}>{p.name} (Skill: {p.skill})</Text>
-                  ))}
-                </View>
-              ))}
-
-              <Button title="Reset Check-Ins" onPress={resetCheckIns} color="orange" />
-              <Button title="Logout" onPress={logoutAdmin} color="black" />
-            </View>
-          )}
+          <Text style={styles.subheader}>Options</Text>
+          <Button title="Reset All Check-ins" color="#f44336" onPress={resetCheckIns} />
+          <Button title="Logout" color="#888" onPress={logoutAdmin} />
         </View>
       )}
     </ScrollView>
@@ -227,22 +240,21 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
-  header: { fontSize: 26, fontWeight: 'bold' },
+  header: { fontSize: 26, fontWeight: 'bold', marginBottom: 10 },
+  subheader: { fontSize: 20, marginTop: 20, marginBottom: 10 },
   input: {
-    borderWidth: 1, padding: 8, marginVertical: 5, borderRadius: 5, backgroundColor: '#fff'
+    borderWidth: 1,
+    padding: 8,
+    marginBottom: 10,
+    borderRadius: 5,
+    backgroundColor: '#fff'
   },
-  subheader: { fontSize: 20, marginTop: 20 },
   message: { marginTop: 10, color: 'green' },
-  playerBox: {
+  playerRow: {
     marginTop: 10,
     backgroundColor: '#eee',
     padding: 10,
     borderRadius: 6
-  },
-  inlineBtns: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginVertical: 8
   },
   groupBox: {
     marginTop: 15,
@@ -251,34 +263,9 @@ const styles = StyleSheet.create({
     borderRadius: 8
   },
   groupTitle: { fontWeight: 'bold', marginBottom: 5 },
-  tabRow: {
+  actionsRow: {
     flexDirection: 'row',
-    marginVertical: 10,
-  },
-  tab: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: '#ddd',
-    alignItems: 'center'
-  },
-  activeTab: {
-    backgroundColor: '#bbb'
-  },
-  badge: {
-    backgroundColor: 'tomato',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginLeft: 10
-  },
-  badgeText: {
-    color: 'white',
-    fontWeight: 'bold'
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20
+    justifyContent: 'space-around',
+    marginTop: 10
   }
 });
