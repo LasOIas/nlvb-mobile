@@ -9,6 +9,7 @@ import {
   Alert,
   ScrollView,
   TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -25,15 +26,14 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [groups, setGroups] = useState<Player[][]>([]);
-  const [numGroups, setNumGroups] = useState('2');
+  const [numGroups, setNumGroups] = useState(2);
   const [message, setMessage] = useState('');
   const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null);
   const [editModeIndex, setEditModeIndex] = useState<number | null>(null);
   const [editedName, setEditedName] = useState('');
   const [editedSkill, setEditedSkill] = useState('');
-  const [activeTab, setActiveTab] = useState<'players' | 'groups' | null>(null);
-  const [newPlayerName, setNewPlayerName] = useState('');
-  const [newPlayerSkill, setNewPlayerSkill] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'players' | 'settings'>('players');
 
   useEffect(() => {
     const loadData = async () => {
@@ -114,24 +114,11 @@ export default function App() {
     setEditedSkill('');
   };
 
-  const addNewPlayer = () => {
-    const name = newPlayerName.trim();
-    const skill = parseFloat(newPlayerSkill);
-    if (!name || isNaN(skill)) return;
-    const exists = players.some(p => normalize(p.name) === normalize(name));
-    if (!exists) {
-      setPlayers([...players, { name, skill }]);
-      setNewPlayerName('');
-      setNewPlayerSkill('');
-    }
-  };
-
   const distributeGroups = () => {
-    const count = parseInt(numGroups) || 2;
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teams: Player[][] = Array.from({ length: count }, () => []);
-    const totals = new Array(count).fill(0);
+    const teams: Player[][] = Array.from({ length: numGroups }, () => []);
+    const totals = new Array(numGroups).fill(0);
 
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
@@ -164,7 +151,12 @@ export default function App() {
 
       {!isAdmin ? (
         <View>
-          <TextInput placeholder="Your name" style={styles.input} value={name} onChangeText={setName} />
+          <TextInput
+            placeholder="Your name"
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+          />
           <Button title="Check In" onPress={checkInPlayer} />
           <Button title="Register" onPress={registerPlayer} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
@@ -181,30 +173,34 @@ export default function App() {
         </View>
       ) : (
         <View>
-          <Text style={styles.subheader}>Menu</Text>
-          <View style={styles.tabRow}>
-            <Button title="Players" onPress={() => setActiveTab('players')} />
-            <Button title="Groups" onPress={() => setActiveTab('groups')} />
-            <Button title="Logout" onPress={logoutAdmin} />
-          </View>
+          <Pressable
+            style={styles.dropdownHeader}
+            onPress={() => setMenuOpen(!menuOpen)}
+          >
+            <Text style={styles.dropdownHeaderText}>Menu ▼</Text>
+          </Pressable>
+
+          {menuOpen && (
+            <View style={styles.dropdownMenu}>
+              <Pressable onPress={() => setActiveTab('players')} style={styles.dropdownItem}>
+                <Text style={styles.dropdownText}>Players</Text>
+              </Pressable>
+              <Pressable onPress={() => setActiveTab('settings')} style={styles.dropdownItem}>
+                <Text style={styles.dropdownText}>Settings</Text>
+              </Pressable>
+            </View>
+          )}
 
           {activeTab === 'players' && (
-            <View>
+            <>
               <Text style={styles.subheader}>Add New Player</Text>
               <TextInput
-                placeholder="Name"
+                placeholder="Player Name"
                 style={styles.input}
-                value={newPlayerName}
-                onChangeText={setNewPlayerName}
+                value={name}
+                onChangeText={setName}
               />
-              <TextInput
-                placeholder="Skill"
-                style={styles.input}
-                value={newPlayerSkill}
-                keyboardType="numeric"
-                onChangeText={setNewPlayerSkill}
-              />
-              <Button title="Add Player" onPress={addNewPlayer} />
+              <Button title="Add Player" onPress={registerPlayer} />
 
               <Text style={styles.subheader}>Players</Text>
               {players.map((p, i) => (
@@ -215,9 +211,9 @@ export default function App() {
 
                   {expandedPlayer === i && (
                     <View style={styles.actionsRow}>
-                      <Button title="Check In" onPress={() => checkInFromAdmin(p.name)} />
-                      <Button title="Edit" onPress={() => setEditModeIndex(i)} />
-                      <Button title="Delete" onPress={() => removePlayer(i)} />
+                      <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.name)} />
+                      <Button title="Edit" color="#2196F3" onPress={() => setEditModeIndex(i)} />
+                      <Button title="Delete" color="#f44336" onPress={() => removePlayer(i)} />
                     </View>
                   )}
 
@@ -241,17 +237,17 @@ export default function App() {
                   )}
                 </View>
               ))}
-            </View>
+            </>
           )}
 
-          {activeTab === 'groups' && (
-            <View>
+          {activeTab === 'settings' && (
+            <>
               <Text style={styles.subheader}>Group Settings</Text>
               <TextInput
                 placeholder="Number of Groups"
                 keyboardType="numeric"
-                value={numGroups}
-                onChangeText={setNumGroups}
+                value={numGroups.toString()}
+                onChangeText={(v) => setNumGroups(parseInt(v) || 2)}
                 style={styles.input}
               />
               <Button title="Generate Groups" onPress={distributeGroups} />
@@ -265,9 +261,10 @@ export default function App() {
                   ))}
                 </View>
               ))}
-
+              <Text style={styles.subheader}>Options</Text>
               <Button title="Reset All Check-ins" color="#f44336" onPress={resetCheckIns} />
-            </View>
+              <Button title="Logout" color="#888" onPress={logoutAdmin} />
+            </>
           )}
         </View>
       )}
@@ -284,30 +281,48 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 10,
     borderRadius: 5,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff'
   },
   message: { marginTop: 10, color: 'green' },
   playerRow: {
     marginTop: 10,
     backgroundColor: '#eee',
     padding: 10,
-    borderRadius: 6,
+    borderRadius: 6
   },
   groupBox: {
     marginTop: 15,
     padding: 10,
     backgroundColor: '#f2f2f2',
-    borderRadius: 8,
+    borderRadius: 8
   },
   groupTitle: { fontWeight: 'bold', marginBottom: 5 },
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 10,
+    marginTop: 10
   },
-  tabRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
+  dropdownHeader: {
+    backgroundColor: '#333',
+    padding: 10,
+    borderRadius: 4,
+    marginBottom: 5,
+  },
+  dropdownHeaderText: {
+    color: '#fff',
+    fontWeight: 'bold'
+  },
+  dropdownMenu: {
+    backgroundColor: '#333',
+    borderRadius: 4,
+    marginBottom: 10
+  },
+  dropdownItem: {
+    padding: 10,
+    borderBottomColor: '#555',
+    borderBottomWidth: 1,
+  },
+  dropdownText: {
+    color: '#fff'
   },
 });
