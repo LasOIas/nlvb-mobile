@@ -21,7 +21,7 @@ export default function App() {
   const [groups, setGroups] = useState<Player[][]>([]);
   const [numGroups, setNumGroups] = useState('2');
   const [message, setMessage] = useState('');
-  const [activePlayer, setActivePlayer] = useState<number | null>(null);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -45,8 +45,8 @@ export default function App() {
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
-  const checkInPlayer = (playerName?: string) => {
-    const trimmed = playerName || name.trim();
+  const checkInPlayer = () => {
+    const trimmed = name.trim();
     if (!trimmed) return;
     const match = players.find(p => normalize(p.name) === normalize(trimmed));
     if (match && !checkedInPlayers.includes(match.name)) {
@@ -82,30 +82,36 @@ export default function App() {
     }
   };
 
-  const updatePlayerSkill = (index: number, newSkill: string) => {
-    const skillVal = parseFloat(newSkill);
-    if (!isNaN(skillVal)) {
+  const updatePlayer = (index: number) => {
+    const newSkill = parseFloat(skill);
+    if (!isNaN(newSkill)) {
       const updated = [...players];
-      updated[index].skill = skillVal;
+      updated[index].skill = newSkill;
       setPlayers(updated);
+      setSkill('');
     }
   };
 
-  const removePlayer = (index: number) => {
+  const deletePlayer = (index: number) => {
     const updated = [...players];
     updated.splice(index, 1);
     setPlayers(updated);
-    setActivePlayer(null);
+    setExpandedIndex(null);
+  };
+
+  const checkInAdmin = (name: string) => {
+    if (!checkedInPlayers.includes(name)) {
+      setCheckedInPlayers([...checkedInPlayers, name]);
+    }
   };
 
   const distributeGroups = () => {
-    const n = parseInt(numGroups);
-    if (isNaN(n) || n <= 0) return;
-
+    const num = parseInt(numGroups);
+    if (isNaN(num) || num <= 0) return;
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teams: Player[][] = Array.from({ length: n }, () => []);
-    const totals = new Array(n).fill(0);
+    const teams: Player[][] = Array.from({ length: num }, () => []);
+    const totals = new Array(num).fill(0);
 
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
@@ -113,6 +119,14 @@ export default function App() {
       totals[index] += p.skill;
     }
     setGroups(teams);
+  };
+
+  const resetCheckins = () => {
+    setCheckedInPlayers([]);
+  };
+
+  const logoutAdmin = () => {
+    setIsAdmin(false);
   };
 
   return (
@@ -127,7 +141,7 @@ export default function App() {
             value={name}
             onChangeText={setName}
           />
-          <Button title="Check In" onPress={() => checkInPlayer()} />
+          <Button title="Check In" onPress={checkInPlayer} />
           <Button title="Register" onPress={registerPlayer} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
 
@@ -146,12 +160,13 @@ export default function App() {
           <Text style={styles.subheader}>Players</Text>
 
           {players.map((p, i) => (
-            <View key={i} style={styles.playerRow}>
-              <TouchableOpacity onPress={() => setActivePlayer(activePlayer === i ? null : i)}>
+            <View key={i} style={[styles.playerRow, expandedIndex === i && styles.selectedCard]}>
+              <TouchableOpacity onPress={() => setExpandedIndex(expandedIndex === i ? null : i)}>
                 <Text>{p.name} (Skill: {p.skill})</Text>
               </TouchableOpacity>
-              {activePlayer === i && (
-                <View style={styles.actionsRow}>
+              {expandedIndex === i && (
+                <View style={styles.actionRow}>
+                  <Button title="Check-In" color="#4A90E2" onPress={() => checkInAdmin(p.name)} />
                   <TextInput
                     placeholder="Skill"
                     keyboardType="numeric"
@@ -159,9 +174,8 @@ export default function App() {
                     value={skill}
                     onChangeText={setSkill}
                   />
-                  <Button title="Edit" onPress={() => updatePlayerSkill(i, skill)} />
-                  <Button title="Check In" onPress={() => checkInPlayer(p.name)} />
-                  <Button title="Delete" onPress={() => removePlayer(i)} color="#dc2626" />
+                  <Button title="Edit" color="#F5A623" onPress={() => updatePlayer(i)} />
+                  <Button title="Delete" color="#D0021B" onPress={() => deletePlayer(i)} />
                 </View>
               )}
             </View>
@@ -169,11 +183,11 @@ export default function App() {
 
           <Text style={styles.subheader}>Group Settings</Text>
           <TextInput
-            placeholder="Number of Groups"
+            placeholder="Number of groups"
+            keyboardType="numeric"
+            style={styles.input}
             value={numGroups}
             onChangeText={setNumGroups}
-            style={styles.input}
-            keyboardType="numeric"
           />
           <Button title="Generate Groups" onPress={distributeGroups} />
 
@@ -187,18 +201,9 @@ export default function App() {
             </View>
           ))}
 
-          <View style={styles.adminActions}>
-            <Button
-              title="Reset All Check-Ins"
-              onPress={() => setCheckedInPlayers([])}
-              color="#dc2626"
-            />
-            <View style={{ marginVertical: 5 }} />
-            <Button
-              title="Logout"
-              onPress={() => setIsAdmin(false)}
-              color="#6b7280"
-            />
+          <View style={styles.buttonRow}>
+            <Button title="Reset All Check-Ins" color="#666" onPress={resetCheckins} />
+            <Button title="Logout" color="#999" onPress={logoutAdmin} />
           </View>
         </View>
       )}
@@ -212,7 +217,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1, padding: 8, marginBottom: 10, borderRadius: 5, backgroundColor: '#fff'
   },
-  subheader: { fontSize: 20, marginTop: 20 },
+  subheader: { fontSize: 20, marginTop: 20, marginBottom: 10 },
   message: { marginTop: 10, color: 'green' },
   playerRow: {
     marginTop: 10,
@@ -220,12 +225,16 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 6
   },
+  selectedCard: {
+    borderWidth: 2,
+    borderColor: '#4A90E2',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4
+  },
   skillInput: {
     borderWidth: 1, marginVertical: 5, padding: 5, borderRadius: 5, backgroundColor: '#fff'
-  },
-  actionsRow: {
-    marginTop: 10,
-    gap: 6,
   },
   groupBox: {
     marginTop: 15,
@@ -234,11 +243,13 @@ const styles = StyleSheet.create({
     borderRadius: 8
   },
   groupTitle: { fontWeight: 'bold', marginBottom: 5 },
-  adminActions: {
-    marginTop: 30,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
-    gap: 10,
+  actionRow: {
+    marginTop: 10,
+    gap: 6,
+    flexDirection: 'column'
   },
+  buttonRow: {
+    marginTop: 30,
+    gap: 10
+  }
 });
