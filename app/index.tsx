@@ -31,8 +31,9 @@ export default function App() {
   const [editModeIndex, setEditModeIndex] = useState<number | null>(null);
   const [editedName, setEditedName] = useState('');
   const [editedSkill, setEditedSkill] = useState('');
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<'players' | 'groups' | 'options'>('players');
+  const [activeTab, setActiveTab] = useState<'players' | 'groups' | null>(null);
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [newPlayerSkill, setNewPlayerSkill] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -113,12 +114,25 @@ export default function App() {
     setEditedSkill('');
   };
 
+  const addNewPlayer = () => {
+    const name = newPlayerName.trim();
+    const skill = parseFloat(newPlayerSkill);
+    if (!name || isNaN(skill)) return;
+    const exists = players.some(p => normalize(p.name) === normalize(name));
+    if (!exists) {
+      setPlayers([...players, { name, skill }]);
+      setNewPlayerName('');
+      setNewPlayerSkill('');
+    }
+  };
+
   const distributeGroups = () => {
     const count = parseInt(numGroups) || 2;
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
     const teams: Player[][] = Array.from({ length: count }, () => []);
     const totals = new Array(count).fill(0);
+
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
       teams[index].push(p);
@@ -154,6 +168,7 @@ export default function App() {
           <Button title="Check In" onPress={checkInPlayer} />
           <Button title="Register" onPress={registerPlayer} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
+
           <Text style={styles.subheader}>Admin Login</Text>
           <TextInput
             placeholder="Admin code"
@@ -166,48 +181,71 @@ export default function App() {
         </View>
       ) : (
         <View>
-          {/* Dropdown Menu */}
-          <TouchableOpacity style={styles.dropdown} onPress={() => setMenuOpen(!menuOpen)}>
-            <Text style={styles.dropdownText}>Menu ▾</Text>
-          </TouchableOpacity>
-          {menuOpen && (
-            <View style={styles.dropdownMenu}>
-              <TouchableOpacity onPress={() => setSelectedTab('players')}><Text style={styles.menuItem}>Players</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => setSelectedTab('groups')}><Text style={styles.menuItem}>Group Settings</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => setSelectedTab('options')}><Text style={styles.menuItem}>Options</Text></TouchableOpacity>
-            </View>
-          )}
+          <Text style={styles.subheader}>Menu</Text>
+          <View style={styles.tabRow}>
+            <Button title="Players" onPress={() => setActiveTab('players')} />
+            <Button title="Groups" onPress={() => setActiveTab('groups')} />
+            <Button title="Logout" onPress={logoutAdmin} />
+          </View>
 
-          {/* Conditional Admin Views */}
-          {selectedTab === 'players' && (
-            <>
+          {activeTab === 'players' && (
+            <View>
+              <Text style={styles.subheader}>Add New Player</Text>
+              <TextInput
+                placeholder="Name"
+                style={styles.input}
+                value={newPlayerName}
+                onChangeText={setNewPlayerName}
+              />
+              <TextInput
+                placeholder="Skill"
+                style={styles.input}
+                value={newPlayerSkill}
+                keyboardType="numeric"
+                onChangeText={setNewPlayerSkill}
+              />
+              <Button title="Add Player" onPress={addNewPlayer} />
+
               <Text style={styles.subheader}>Players</Text>
               {players.map((p, i) => (
                 <View key={i} style={styles.playerRow}>
                   <TouchableOpacity onPress={() => togglePlayerExpand(i)}>
                     <Text>{p.name} (Skill: {p.skill})</Text>
                   </TouchableOpacity>
+
                   {expandedPlayer === i && (
                     <View style={styles.actionsRow}>
-                      <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.name)} />
-                      <Button title="Edit" color="#2196F3" onPress={() => setEditModeIndex(i)} />
-                      <Button title="Delete" color="#f44336" onPress={() => removePlayer(i)} />
+                      <Button title="Check In" onPress={() => checkInFromAdmin(p.name)} />
+                      <Button title="Edit" onPress={() => setEditModeIndex(i)} />
+                      <Button title="Delete" onPress={() => removePlayer(i)} />
                     </View>
                   )}
+
                   {editModeIndex === i && (
                     <View>
-                      <TextInput placeholder="Name" value={editedName} style={styles.input} onChangeText={setEditedName} />
-                      <TextInput placeholder="Skill" keyboardType="numeric" value={editedSkill} style={styles.input} onChangeText={setEditedSkill} />
+                      <TextInput
+                        placeholder="Name"
+                        value={editedName}
+                        style={styles.input}
+                        onChangeText={setEditedName}
+                      />
+                      <TextInput
+                        placeholder="Skill"
+                        keyboardType="numeric"
+                        value={editedSkill}
+                        style={styles.input}
+                        onChangeText={setEditedSkill}
+                      />
                       <Button title="Save" onPress={() => updatePlayer(i)} />
                     </View>
                   )}
                 </View>
               ))}
-            </>
+            </View>
           )}
 
-          {selectedTab === 'groups' && (
-            <>
+          {activeTab === 'groups' && (
+            <View>
               <Text style={styles.subheader}>Group Settings</Text>
               <TextInput
                 placeholder="Number of Groups"
@@ -217,6 +255,7 @@ export default function App() {
                 style={styles.input}
               />
               <Button title="Generate Groups" onPress={distributeGroups} />
+
               <Text style={styles.subheader}>Generated Groups</Text>
               {groups.map((g, i) => (
                 <View key={i} style={styles.groupBox}>
@@ -226,15 +265,9 @@ export default function App() {
                   ))}
                 </View>
               ))}
-            </>
-          )}
 
-          {selectedTab === 'options' && (
-            <>
-              <Text style={styles.subheader}>Options</Text>
               <Button title="Reset All Check-ins" color="#f44336" onPress={resetCheckIns} />
-              <Button title="Logout" color="#888" onPress={logoutAdmin} />
-            </>
+            </View>
           )}
         </View>
       )}
@@ -251,44 +284,30 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 10,
     borderRadius: 5,
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
   },
   message: { marginTop: 10, color: 'green' },
   playerRow: {
     marginTop: 10,
     backgroundColor: '#eee',
     padding: 10,
-    borderRadius: 6
+    borderRadius: 6,
   },
   groupBox: {
     marginTop: 15,
     padding: 10,
     backgroundColor: '#f2f2f2',
-    borderRadius: 8
+    borderRadius: 8,
   },
   groupTitle: { fontWeight: 'bold', marginBottom: 5 },
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 10
+    marginTop: 10,
   },
-  dropdown: {
-    backgroundColor: '#333',
-    padding: 10,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-    marginBottom: 10
+  tabRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
   },
-  dropdownText: { color: 'white', fontWeight: 'bold' },
-  dropdownMenu: {
-    backgroundColor: '#222',
-    borderRadius: 6,
-    paddingVertical: 8,
-    marginBottom: 20
-  },
-  menuItem: {
-    color: 'white',
-    paddingVertical: 10,
-    paddingHorizontal: 15
-  }
 });
