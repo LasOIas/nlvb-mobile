@@ -28,7 +28,7 @@ export default function App() {
   const [groups, setGroups] = useState<Player[][]>([]);
   const [numGroups, setNumGroups] = useState(2);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'players' | 'groups' | 'options'>('players');
+  const [expandedSection, setExpandedSection] = useState<'players' | 'groups' | null>('players');
   const [editModeIndex, setEditModeIndex] = useState<number | null>(null);
   const [editedName, setEditedName] = useState('');
   const [editedSkill, setEditedSkill] = useState('');
@@ -117,6 +117,7 @@ export default function App() {
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
     const teams: Player[][] = Array.from({ length: numGroups }, () => []);
     const totals = new Array(numGroups).fill(0);
+
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
       teams[index].push(p);
@@ -128,14 +129,20 @@ export default function App() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <Text style={styles.header}>NLVB App</Text>
-      <Text style={styles.checkInCount}>Checked-in: {checkedInPlayers.length}</Text>
+      <Text style={styles.subheader}>Checked-in: {checkedInPlayers.length}</Text>
 
       {!isAdmin ? (
         <View>
-          <TextInput placeholder="Your name" style={styles.input} value={name} onChangeText={setName} />
+          <TextInput
+            placeholder="Your name"
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+          />
           <Button title="Check In" onPress={checkInPlayer} />
           <Button title="Register" onPress={registerPlayer} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
+
           <Text style={styles.subheader}>Admin Login</Text>
           <TextInput
             placeholder="Admin code"
@@ -148,38 +155,27 @@ export default function App() {
         </View>
       ) : (
         <View>
-          <View style={styles.tabRow}>
-            <Button title="Players" onPress={() => setActiveTab('players')} />
-            <Button title="Groups" onPress={() => setActiveTab('groups')} />
-            <Button title="Options" onPress={() => setActiveTab('options')} />
+          <View style={styles.dropdownTabs}>
+            <TouchableOpacity onPress={() => setExpandedSection('players')} style={[styles.tab, expandedSection === 'players' && styles.activeTab]}>
+              <Text style={styles.tabText}>Player List</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setExpandedSection('groups')} style={[styles.tab, expandedSection === 'groups' && styles.activeTab]}>
+              <Text style={styles.tabText}>Groups</Text>
+            </TouchableOpacity>
           </View>
 
-          {activeTab === 'players' && (
+          {expandedSection === 'players' && (
             <View>
-              <Text style={styles.subheader}>Players</Text>
+              <Text style={styles.subheader}>Player List</Text>
               {players.map((p, i) => (
                 <View key={i} style={styles.playerRow}>
                   <Text>{p.name} (Skill: {p.skill})</Text>
-                  <TextInput
-                    placeholder="Name"
-                    style={styles.input}
-                    value={editModeIndex === i ? editedName : ''}
-                    onChangeText={setEditedName}
-                  />
-                  <TextInput
-                    placeholder="Skill"
-                    keyboardType="numeric"
-                    style={styles.input}
-                    value={editModeIndex === i ? editedSkill : ''}
-                    onChangeText={setEditedSkill}
-                  />
-                  <Button title="Save" onPress={() => updatePlayer(i)} />
                 </View>
               ))}
             </View>
           )}
 
-          {activeTab === 'groups' && (
+          {expandedSection === 'groups' && (
             <View>
               <Text style={styles.subheader}>Group Settings</Text>
               <TextInput
@@ -190,6 +186,8 @@ export default function App() {
                 style={styles.input}
               />
               <Button title="Generate Groups" onPress={distributeGroups} />
+
+              <Text style={styles.subheader}>Generated Groups</Text>
               {groups.map((g, i) => (
                 <View key={i} style={styles.groupBox}>
                   <Text style={styles.groupTitle}>Group {i + 1}</Text>
@@ -201,13 +199,9 @@ export default function App() {
             </View>
           )}
 
-          {activeTab === 'options' && (
-            <View>
-              <Text style={styles.subheader}>Admin Options</Text>
-              <Button title="Reset Check-ins" onPress={resetCheckIns} color="#f44336" />
-              <Button title="Logout" onPress={logoutAdmin} color="#999" />
-            </View>
-          )}
+          <Text style={styles.subheader}>Options</Text>
+          <Button title="Reset All Check-ins" color="#f44336" onPress={resetCheckIns} />
+          <Button title="Logout" color="#888" onPress={logoutAdmin} />
         </View>
       )}
     </ScrollView>
@@ -223,26 +217,37 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 10,
     borderRadius: 5,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff'
   },
   message: { marginTop: 10, color: 'green' },
-  checkInCount: { fontSize: 14, color: '#333', marginBottom: 10 },
   playerRow: {
     marginTop: 10,
     backgroundColor: '#eee',
     padding: 10,
-    borderRadius: 6,
+    borderRadius: 6
   },
   groupBox: {
     marginTop: 15,
     padding: 10,
     backgroundColor: '#f2f2f2',
-    borderRadius: 8,
+    borderRadius: 8
   },
   groupTitle: { fontWeight: 'bold', marginBottom: 5 },
-  tabRow: {
+  dropdownTabs: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginVertical: 10,
+    marginBottom: 20,
   },
+  tab: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#ddd',
+    borderRadius: 6,
+  },
+  activeTab: {
+    backgroundColor: '#bbb',
+  },
+  tabText: {
+    fontWeight: 'bold',
+  }
 });
