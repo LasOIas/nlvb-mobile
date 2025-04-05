@@ -10,6 +10,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Pressable,
+  SafeAreaView
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -145,132 +146,136 @@ export default function App() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={styles.header}>NLVB App</Text>
-      <Text style={styles.subheader}>Checked-in: {checkedInPlayers.length}</Text>
+    <SafeAreaView style={{ flex: 1 }}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
+        <Text style={styles.header}>NLVB App</Text>
+        <Text style={styles.subheader}>Checked-in: {checkedInPlayers.length}</Text>
 
-      {!isAdmin ? (
-        <View>
-          <TextInput
-            placeholder="Your name"
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-          />
-          <Button title="Check In" onPress={checkInPlayer} />
-          <Button title="Register" onPress={registerPlayer} />
-          {message ? <Text style={styles.message}>{message}</Text> : null}
+        {!isAdmin ? (
+          <View>
+            <TextInput
+              placeholder="Your name"
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+            />
+            <Button title="Check In" onPress={checkInPlayer} />
+            <Button title="Register" onPress={registerPlayer} />
+            {message ? <Text style={styles.message}>{message}</Text> : null}
 
-          <Text style={styles.subheader}>Admin Login</Text>
-          <TextInput
-            placeholder="Admin code"
-            style={styles.input}
-            secureTextEntry
-            value={adminCode}
-            onChangeText={setAdminCode}
-          />
-          <Button title="Login as Admin" onPress={loginAdmin} />
-        </View>
-      ) : (
-        <View>
-          <Pressable
-            style={styles.dropdownHeader}
-            onPress={() => setMenuOpen(!menuOpen)}
-          >
-            <Text style={styles.dropdownHeaderText}>Menu ▼</Text>
-          </Pressable>
+            <Text style={styles.subheader}>Admin Login</Text>
+            <TextInput
+              placeholder="Admin code"
+              style={styles.input}
+              secureTextEntry
+              value={adminCode}
+              onChangeText={setAdminCode}
+            />
+            <Button title="Login as Admin" onPress={loginAdmin} />
+          </View>
+        ) : (
+          <View>
+            <Pressable
+              style={styles.dropdownHeader}
+              onPress={() => setMenuOpen(!menuOpen)}
+            >
+              <Text style={styles.dropdownHeaderText}>Menu ▼</Text>
+            </Pressable>
 
-          {menuOpen && (
-            <View style={styles.dropdownMenu}>
-              <Pressable onPress={() => setActiveTab('players')} style={styles.dropdownItem}>
-                <Text style={styles.dropdownText}>Players</Text>
-              </Pressable>
-              <Pressable onPress={() => setActiveTab('settings')} style={styles.dropdownItem}>
-                <Text style={styles.dropdownText}>Settings</Text>
-              </Pressable>
-            </View>
-          )}
+            {menuOpen && (
+              <View style={styles.dropdownMenu}>
+                <Pressable onPress={() => setActiveTab('players')} style={styles.dropdownItem}>
+                  <Text style={styles.dropdownText}>Players</Text>
+                </Pressable>
+                <Pressable onPress={() => setActiveTab('settings')} style={styles.dropdownItem}>
+                  <Text style={styles.dropdownText}>Settings</Text>
+                </Pressable>
+              </View>
+            )}
 
-          {activeTab === 'players' && (
-            <>
-              <Text style={styles.subheader}>Add New Player</Text>
-              <TextInput
-                placeholder="Player Name"
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-              />
-              <Button title="Add Player" onPress={registerPlayer} />
+            {activeTab === 'players' && (
+              <>
+                <Text style={styles.subheader}>Add New Player</Text>
+                <TextInput
+                  placeholder="Player Name"
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                />
+                <Button title="Add Player" onPress={registerPlayer} />
 
-              <Text style={styles.subheader}>Players</Text>
-              {players.map((p, i) => (
-                <View key={i} style={styles.playerRow}>
-                  <TouchableOpacity onPress={() => togglePlayerExpand(i)}>
-                    <Text>
-                      {p.name} {checkedInPlayers.includes(p.name) ? '✅' : ''} (Skill: {p.skill})
-                    </Text>
-                  </TouchableOpacity>
+                <Text style={styles.subheader}>Players</Text>
+                {players.map((p, i) => (
+                  <View key={i} style={styles.playerRow}>
+                    <TouchableOpacity onPress={() => togglePlayerExpand(i)}>
+                      <Text>{p.name} (Skill: {p.skill}) {checkedInPlayers.includes(p.name) ? '✅' : ''}</Text>
+                    </TouchableOpacity>
 
-                  {expandedPlayer === i && (
-                    <View style={styles.actionsRow}>
-                      <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.name)} />
-                      <Button title="Edit" color="#2196F3" onPress={() => setEditModeIndex(i)} />
-                      <Button title="Delete" color="#f44336" onPress={() => removePlayer(i)} />
-                    </View>
-                  )}
+                    {expandedPlayer === i && (
+                      <View style={styles.actionsRow}>
+                        <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.name)} />
+                        <Button title="Edit" color="#2196F3" onPress={() => setEditModeIndex(i)} />
+                        <Button title="Delete" color="#f44336" onPress={() => removePlayer(i)} />
+                      </View>
+                    )}
 
-                  {editModeIndex === i && (
-                    <View>
-                      <TextInput
-                        placeholder="Name"
-                        value={editedName}
-                        style={styles.input}
-                        onChangeText={setEditedName}
-                      />
-                      <TextInput
-                        placeholder="Skill"
-                        keyboardType="numeric"
-                        value={editedSkill}
-                        style={styles.input}
-                        onChangeText={setEditedSkill}
-                      />
-                      <Button title="Save" onPress={() => updatePlayer(i)} />
-                    </View>
-                  )}
-                </View>
-              ))}
-            </>
-          )}
+                    {editModeIndex === i && (
+                      <View>
+                        <TextInput
+                          placeholder="Name"
+                          value={editedName}
+                          style={styles.input}
+                          onChangeText={setEditedName}
+                        />
+                        <TextInput
+                          placeholder="Skill"
+                          keyboardType="numeric"
+                          value={editedSkill}
+                          style={styles.input}
+                          onChangeText={setEditedSkill}
+                        />
+                        <Button title="Save" onPress={() => updatePlayer(i)} />
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </>
+            )}
 
-          {activeTab === 'settings' && (
-            <>
-              <Text style={styles.subheader}>Group Settings</Text>
-              <TextInput
-                placeholder="Number of Groups"
-                keyboardType="numeric"
-                value={numGroups.toString()}
-                onChangeText={(v) => setNumGroups(parseInt(v) || 2)}
-                style={styles.input}
-              />
-              <Button title="Generate Groups" onPress={distributeGroups} />
+            {activeTab === 'settings' && (
+              <>
+                <Text style={styles.subheader}>Group Settings</Text>
+                <TextInput
+                  placeholder="Number of Groups"
+                  keyboardType="numeric"
+                  value={numGroups.toString()}
+                  onChangeText={(v) => setNumGroups(parseInt(v) || 2)}
+                  style={styles.input}
+                />
+                <Button title="Generate Groups" onPress={distributeGroups} />
 
-              <Text style={styles.subheader}>Generated Groups</Text>
-              {groups.map((g, i) => (
-                <View key={i} style={styles.groupBox}>
-                  <Text style={styles.groupTitle}>Group {i + 1}</Text>
-                  {g.map((p, j) => (
-                    <Text key={j}>{p.name} (Skill: {p.skill})</Text>
-                  ))}
-                </View>
-              ))}
-              <Text style={styles.subheader}>Options</Text>
-              <Button title="Reset All Check-ins" color="#f44336" onPress={resetCheckIns} />
-              <Button title="Logout" color="#888" onPress={logoutAdmin} />
-            </>
-          )}
+                <Text style={styles.subheader}>Generated Groups</Text>
+                {groups.map((g, i) => (
+                  <View key={i} style={styles.groupBox}>
+                    <Text style={styles.groupTitle}>Group {i + 1}</Text>
+                    {g.map((p, j) => (
+                      <Text key={j}>{p.name} (Skill: {p.skill})</Text>
+                    ))}
+                  </View>
+                ))}
+              </>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {isAdmin && activeTab === 'settings' && (
+        <View style={styles.stickyFooter}>
+          <Button title="Reset All Check-ins" color="#f44336" onPress={resetCheckIns} />
+          <Button title="Logout" color="#888" onPress={logoutAdmin} />
         </View>
       )}
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -327,4 +332,14 @@ const styles = StyleSheet.create({
   dropdownText: {
     color: '#fff'
   },
+  stickyFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#f9f9f9',
+    padding: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#ccc'
+  }
 });
