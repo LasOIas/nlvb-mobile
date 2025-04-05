@@ -10,7 +10,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Pressable,
-  SafeAreaView
+  SafeAreaView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -146,8 +146,8 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
+    <SafeAreaView style={styles.fullScreen}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
         <Text style={styles.header}>NLVB App</Text>
         <Text style={styles.subheader}>Checked-in: {checkedInPlayers.length}</Text>
 
@@ -208,7 +208,10 @@ export default function App() {
                 {players.map((p, i) => (
                   <View key={i} style={styles.playerRow}>
                     <TouchableOpacity onPress={() => togglePlayerExpand(i)}>
-                      <Text>{p.name} (Skill: {p.skill}) {checkedInPlayers.includes(p.name) ? '✅' : ''}</Text>
+                      <Text>
+                        {p.name} (Skill: {p.skill})
+                        {checkedInPlayers.includes(p.name) ? ' ✅' : ''}
+                      </Text>
                     </TouchableOpacity>
 
                     {expandedPlayer === i && (
@@ -269,8 +272,8 @@ export default function App() {
         )}
       </ScrollView>
 
-      {isAdmin && activeTab === 'settings' && (
-        <View style={styles.stickyFooter}>
+      {isAdmin && (
+        <View style={styles.bottomActions}>
           <Button title="Reset All Check-ins" color="#f44336" onPress={resetCheckIns} />
           <Button title="Logout" color="#888" onPress={logoutAdmin} />
         </View>
@@ -280,6 +283,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  fullScreen: { flex: 1 },
   container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
   header: { fontSize: 26, fontWeight: 'bold', marginBottom: 10 },
   subheader: { fontSize: 20, marginTop: 20, marginBottom: 10 },
@@ -332,14 +336,16 @@ const styles = StyleSheet.create({
   dropdownText: {
     color: '#fff'
   },
-  stickyFooter: {
+  bottomActions: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#fff',
     padding: 10,
     borderTopWidth: 1,
-    borderTopColor: '#ccc'
+    borderColor: '#ccc',
+    flexDirection: 'row',
+    justifyContent: 'space-around'
   }
 });
