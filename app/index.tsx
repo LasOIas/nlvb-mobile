@@ -19,9 +19,9 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [groups, setGroups] = useState<Player[][]>([]);
-  const [numGroups, setNumGroups] = useState(2);
+  const [numGroups, setNumGroups] = useState('2');
   const [message, setMessage] = useState('');
-  const [expandedPlayerIndex, setExpandedPlayerIndex] = useState<number | null>(null);
+  const [activePlayer, setActivePlayer] = useState<number | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -45,36 +45,18 @@ export default function App() {
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
-  const checkInPlayer = (playerName: string) => {
-    if (!checkedInPlayers.includes(playerName)) {
-      setCheckedInPlayers([...checkedInPlayers, playerName]);
+  const checkInPlayer = (playerName?: string) => {
+    const trimmed = playerName || name.trim();
+    if (!trimmed) return;
+    const match = players.find(p => normalize(p.name) === normalize(trimmed));
+    if (match && !checkedInPlayers.includes(match.name)) {
+      setCheckedInPlayers([...checkedInPlayers, match.name]);
       setMessage('Checked in');
-      setTimeout(() => setMessage(''), 2000);
-    }
-  };
-
-  const removePlayer = (index: number) => {
-    const updated = players.filter((_, i) => i !== index);
-    setPlayers(updated);
-    setCheckedInPlayers(checkedInPlayers.filter(name => name !== players[index].name));
-  };
-
-  const editPlayerSkill = (index: number, newSkill: string) => {
-    const skillValue = parseFloat(newSkill);
-    if (!isNaN(skillValue)) {
-      const updated = [...players];
-      updated[index].skill = skillValue;
-      setPlayers(updated);
-    }
-  };
-
-  const loginAdmin = () => {
-    if (adminCode === 'nlvb2025') {
-      setIsAdmin(true);
-      setAdminCode('');
     } else {
-      Alert.alert('Incorrect admin code');
+      setMessage('Player not found');
     }
+    setName('');
+    setTimeout(() => setMessage(''), 2000);
   };
 
   const registerPlayer = () => {
@@ -91,11 +73,39 @@ export default function App() {
     setTimeout(() => setMessage(''), 2000);
   };
 
+  const loginAdmin = () => {
+    if (adminCode === 'nlvb2025') {
+      setIsAdmin(true);
+      setAdminCode('');
+    } else {
+      Alert.alert('Incorrect admin code');
+    }
+  };
+
+  const updatePlayerSkill = (index: number, newSkill: string) => {
+    const skillVal = parseFloat(newSkill);
+    if (!isNaN(skillVal)) {
+      const updated = [...players];
+      updated[index].skill = skillVal;
+      setPlayers(updated);
+    }
+  };
+
+  const removePlayer = (index: number) => {
+    const updated = [...players];
+    updated.splice(index, 1);
+    setPlayers(updated);
+    setActivePlayer(null);
+  };
+
   const distributeGroups = () => {
+    const n = parseInt(numGroups);
+    if (isNaN(n) || n <= 0) return;
+
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teams: Player[][] = Array.from({ length: numGroups }, () => []);
-    const totals = new Array(numGroups).fill(0);
+    const teams: Player[][] = Array.from({ length: n }, () => []);
+    const totals = new Array(n).fill(0);
 
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
@@ -117,7 +127,7 @@ export default function App() {
             value={name}
             onChangeText={setName}
           />
-          <Button title="Check In" onPress={() => checkInPlayer(name)} />
+          <Button title="Check In" onPress={() => checkInPlayer()} />
           <Button title="Register" onPress={registerPlayer} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
 
@@ -136,39 +146,38 @@ export default function App() {
           <Text style={styles.subheader}>Players</Text>
 
           {players.map((p, i) => (
-            <TouchableOpacity
-              key={i}
-              style={styles.playerCard}
-              onPress={() => setExpandedPlayerIndex(expandedPlayerIndex === i ? null : i)}
-            >
-              <Text style={styles.playerName}>{p.name}</Text>
-              <Text style={styles.playerSkill}>Skill: {p.skill}</Text>
-              {expandedPlayerIndex === i && (
-                <View style={styles.actionRow}>
-                  <Button title="Check In" onPress={() => checkInPlayer(p.name)} />
+            <View key={i} style={styles.playerRow}>
+              <TouchableOpacity onPress={() => setActivePlayer(activePlayer === i ? null : i)}>
+                <Text>{p.name} (Skill: {p.skill})</Text>
+              </TouchableOpacity>
+              {activePlayer === i && (
+                <View style={styles.actionsRow}>
                   <TextInput
                     placeholder="Skill"
                     keyboardType="numeric"
                     style={styles.skillInput}
-                    onChangeText={(text) => editPlayerSkill(i, text)}
+                    value={skill}
+                    onChangeText={setSkill}
                   />
-                  <Button title="Delete" color="red" onPress={() => removePlayer(i)} />
+                  <Button title="Edit" onPress={() => updatePlayerSkill(i, skill)} />
+                  <Button title="Check In" onPress={() => checkInPlayer(p.name)} />
+                  <Button title="Delete" onPress={() => removePlayer(i)} color="#dc2626" />
                 </View>
               )}
-            </TouchableOpacity>
+            </View>
           ))}
 
-          <Text style={styles.label}>Number of Groups:</Text>
+          <Text style={styles.subheader}>Group Settings</Text>
           <TextInput
-            placeholder="Enter number of groups"
-            keyboardType="numeric"
-            value={numGroups.toString()}
-            onChangeText={text => setNumGroups(Number(text) || 2)}
+            placeholder="Number of Groups"
+            value={numGroups}
+            onChangeText={setNumGroups}
             style={styles.input}
+            keyboardType="numeric"
           />
-
           <Button title="Generate Groups" onPress={distributeGroups} />
 
+          <Text style={styles.subheader}>Generated Groups</Text>
           {groups.map((g, i) => (
             <View key={i} style={styles.groupBox}>
               <Text style={styles.groupTitle}>Group {i + 1}</Text>
@@ -177,6 +186,20 @@ export default function App() {
               ))}
             </View>
           ))}
+
+          <View style={styles.adminActions}>
+            <Button
+              title="Reset All Check-Ins"
+              onPress={() => setCheckedInPlayers([])}
+              color="#dc2626"
+            />
+            <View style={{ marginVertical: 5 }} />
+            <Button
+              title="Logout"
+              onPress={() => setIsAdmin(false)}
+              color="#6b7280"
+            />
+          </View>
         </View>
       )}
     </ScrollView>
@@ -189,31 +212,21 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1, padding: 8, marginBottom: 10, borderRadius: 5, backgroundColor: '#fff'
   },
-  subheader: { fontSize: 20, marginTop: 20, marginBottom: 10 },
+  subheader: { fontSize: 20, marginTop: 20 },
   message: { marginTop: 10, color: 'green' },
-  playerCard: {
+  playerRow: {
     marginTop: 10,
     backgroundColor: '#eee',
     padding: 10,
     borderRadius: 6
   },
-  playerName: {
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  playerSkill: {
-    marginBottom: 5,
-    color: '#555',
-  },
   skillInput: {
-    borderWidth: 1, marginVertical: 5, padding: 5, borderRadius: 5, backgroundColor: '#fff', flex: 1
+    borderWidth: 1, marginVertical: 5, padding: 5, borderRadius: 5, backgroundColor: '#fff'
   },
-  actionRow: {
+  actionsRow: {
     marginTop: 10,
-    flexDirection: 'column',
     gap: 6,
   },
-  label: { marginTop: 20 },
   groupBox: {
     marginTop: 15,
     padding: 10,
@@ -221,4 +234,11 @@ const styles = StyleSheet.create({
     borderRadius: 8
   },
   groupTitle: { fontWeight: 'bold', marginBottom: 5 },
+  adminActions: {
+    marginTop: 30,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#ccc',
+    gap: 10,
+  },
 });
