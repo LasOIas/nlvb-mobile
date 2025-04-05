@@ -4,7 +4,6 @@ import {
   View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Picker } from '@react-native-picker/picker';
 
 interface Player {
   name: string;
@@ -21,7 +20,9 @@ export default function App() {
   const [groups, setGroups] = useState<Player[][]>([]);
   const [numGroups, setNumGroups] = useState('2');
   const [message, setMessage] = useState('');
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [expandedPlayerIndex, setExpandedPlayerIndex] = useState<number | null>(null);
+  const [editingPlayerIndex, setEditingPlayerIndex] = useState<number | null>(null);
+  const [editedSkill, setEditedSkill] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -82,36 +83,32 @@ export default function App() {
     }
   };
 
-  const updatePlayer = (index: number) => {
-    const newSkill = parseFloat(skill);
-    if (!isNaN(newSkill)) {
+  const logoutAdmin = () => {
+    setIsAdmin(false);
+  };
+
+  const resetCheckIns = () => {
+    setCheckedInPlayers([]);
+  };
+
+  const updatePlayerSkill = (index: number) => {
+    const skillValue = parseFloat(editedSkill);
+    if (!isNaN(skillValue)) {
       const updated = [...players];
-      updated[index].skill = newSkill;
+      updated[index].skill = skillValue;
       setPlayers(updated);
-      setSkill('');
-    }
-  };
-
-  const deletePlayer = (index: number) => {
-    const updated = [...players];
-    updated.splice(index, 1);
-    setPlayers(updated);
-    setExpandedIndex(null);
-  };
-
-  const checkInAdmin = (name: string) => {
-    if (!checkedInPlayers.includes(name)) {
-      setCheckedInPlayers([...checkedInPlayers, name]);
+      setEditedSkill('');
+      setEditingPlayerIndex(null);
     }
   };
 
   const distributeGroups = () => {
-    const num = parseInt(numGroups);
-    if (isNaN(num) || num <= 0) return;
+    const groupCount = parseInt(numGroups);
+    if (isNaN(groupCount) || groupCount < 1) return;
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teams: Player[][] = Array.from({ length: num }, () => []);
-    const totals = new Array(num).fill(0);
+    const teams: Player[][] = Array.from({ length: groupCount }, () => []);
+    const totals = new Array(groupCount).fill(0);
 
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
@@ -121,26 +118,13 @@ export default function App() {
     setGroups(teams);
   };
 
-  const resetCheckins = () => {
-    setCheckedInPlayers([]);
-  };
-
-  const logoutAdmin = () => {
-    setIsAdmin(false);
-  };
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <Text style={styles.header}>NLVB App</Text>
 
       {!isAdmin ? (
         <View>
-          <TextInput
-            placeholder="Your name"
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-          />
+          <TextInput placeholder="Your name" style={styles.input} value={name} onChangeText={setName} />
           <Button title="Check In" onPress={checkInPlayer} />
           <Button title="Register" onPress={registerPlayer} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
@@ -160,22 +144,34 @@ export default function App() {
           <Text style={styles.subheader}>Players</Text>
 
           {players.map((p, i) => (
-            <View key={i} style={[styles.playerRow, expandedIndex === i && styles.selectedCard]}>
-              <TouchableOpacity onPress={() => setExpandedIndex(expandedIndex === i ? null : i)}>
-                <Text>{p.name} (Skill: {p.skill})</Text>
+            <View key={i} style={styles.playerRow}>
+              <TouchableOpacity onPress={() => setExpandedPlayerIndex(expandedPlayerIndex === i ? null : i)}>
+                <Text style={styles.playerName}>{p.name} (Skill: {p.skill})</Text>
               </TouchableOpacity>
-              {expandedIndex === i && (
-                <View style={styles.actionRow}>
-                  <Button title="Check-In" color="#4A90E2" onPress={() => checkInAdmin(p.name)} />
-                  <TextInput
-                    placeholder="Skill"
-                    keyboardType="numeric"
-                    style={styles.skillInput}
-                    value={skill}
-                    onChangeText={setSkill}
-                  />
-                  <Button title="Edit" color="#F5A623" onPress={() => updatePlayer(i)} />
-                  <Button title="Delete" color="#D0021B" onPress={() => deletePlayer(i)} />
+
+              {expandedPlayerIndex === i && (
+                <View>
+                  <View style={styles.buttonRow}>
+                    <Button title="Check-In" color="#4CAF50" onPress={() => setCheckedInPlayers([...checkedInPlayers, p.name])} />
+                    <Button title="Edit" color="#2196F3" onPress={() => setEditingPlayerIndex(i)} />
+                    <Button title="Delete" color="#f44336" onPress={() => {
+                      const updated = players.filter((_, idx) => idx !== i);
+                      setPlayers(updated);
+                    }} />
+                  </View>
+
+                  {editingPlayerIndex === i && (
+                    <View>
+                      <TextInput
+                        placeholder="New Skill"
+                        style={styles.skillInput}
+                        keyboardType="numeric"
+                        value={editedSkill}
+                        onChangeText={setEditedSkill}
+                      />
+                      <Button title="Update Skill" onPress={() => updatePlayerSkill(i)} />
+                    </View>
+                  )}
                 </View>
               )}
             </View>
@@ -183,15 +179,15 @@ export default function App() {
 
           <Text style={styles.subheader}>Group Settings</Text>
           <TextInput
-            placeholder="Number of groups"
+            placeholder="Number of Groups"
             keyboardType="numeric"
-            style={styles.input}
             value={numGroups}
             onChangeText={setNumGroups}
+            style={styles.input}
           />
           <Button title="Generate Groups" onPress={distributeGroups} />
 
-          <Text style={styles.subheader}>Generated Groups</Text>
+          <Text style={styles.subheader}>Groups</Text>
           {groups.map((g, i) => (
             <View key={i} style={styles.groupBox}>
               <Text style={styles.groupTitle}>Group {i + 1}</Text>
@@ -201,9 +197,9 @@ export default function App() {
             </View>
           ))}
 
-          <View style={styles.buttonRow}>
-            <Button title="Reset All Check-Ins" color="#666" onPress={resetCheckins} />
-            <Button title="Logout" color="#999" onPress={logoutAdmin} />
+          <View style={styles.buttonRowBottom}>
+            <Button title="Reset Check-Ins" onPress={resetCheckIns} color="#9C27B0" />
+            <Button title="Logout" onPress={logoutAdmin} color="#FF5722" />
           </View>
         </View>
       )}
@@ -217,24 +213,17 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1, padding: 8, marginBottom: 10, borderRadius: 5, backgroundColor: '#fff'
   },
-  subheader: { fontSize: 20, marginTop: 20, marginBottom: 10 },
+  subheader: { fontSize: 20, marginTop: 20 },
   message: { marginTop: 10, color: 'green' },
   playerRow: {
     marginTop: 10,
     backgroundColor: '#eee',
     padding: 10,
-    borderRadius: 6
+    borderRadius: 6,
   },
-  selectedCard: {
-    borderWidth: 2,
-    borderColor: '#4A90E2',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4
-  },
+  playerName: { fontWeight: 'bold' },
   skillInput: {
-    borderWidth: 1, marginVertical: 5, padding: 5, borderRadius: 5, backgroundColor: '#fff'
+    borderWidth: 1, marginTop: 5, padding: 5, borderRadius: 5, backgroundColor: '#fff'
   },
   groupBox: {
     marginTop: 15,
@@ -243,12 +232,13 @@ const styles = StyleSheet.create({
     borderRadius: 8
   },
   groupTitle: { fontWeight: 'bold', marginBottom: 5 },
-  actionRow: {
-    marginTop: 10,
-    gap: 6,
-    flexDirection: 'column'
-  },
   buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    gap: 5
+  },
+  buttonRowBottom: {
     marginTop: 30,
     gap: 10
   }
