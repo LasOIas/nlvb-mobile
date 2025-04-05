@@ -4,6 +4,7 @@ import {
   View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
 
 interface Player {
   name: string;
@@ -18,12 +19,14 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [groups, setGroups] = useState<Player[][]>([]);
-  const [numGroups, setNumGroups] = useState('');
+  const [numGroups, setNumGroups] = useState('2');
   const [message, setMessage] = useState('');
-  const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null);
-  const [editMode, setEditMode] = useState<number | null>(null);
+  const [expandedPlayerIndex, setExpandedPlayerIndex] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editSkill, setEditSkill] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedAdminTab, setSelectedAdminTab] = useState<'Players' | 'Groups'>('Players');
 
   useEffect(() => {
     const loadData = async () => {
@@ -84,54 +87,52 @@ export default function App() {
     }
   };
 
-  const resetCheckIns = () => {
-    setCheckedInPlayers([]);
+  const handleCheckIn = (name: string) => {
+    if (!checkedInPlayers.includes(name)) {
+      setCheckedInPlayers([...checkedInPlayers, name]);
+    }
   };
 
-  const logoutAdmin = () => {
-    setIsAdmin(false);
-  };
-
-  const saveEditedPlayer = (index: number) => {
+  const handleDelete = (index: number) => {
     const updated = [...players];
-    const newSkill = parseFloat(editSkill);
-    if (!editName.trim() || isNaN(newSkill)) return;
-
-    updated[index] = { name: editName.trim(), skill: newSkill };
+    updated.splice(index, 1);
     setPlayers(updated);
-    setEditMode(null);
-    setExpandedPlayer(null);
-    setEditName('');
-    setEditSkill('');
+    setCheckedInPlayers(checkedInPlayers.filter(name => name !== players[index].name));
+  };
+
+  const handleEdit = (index: number) => {
+    setEditName(players[index].name);
+    setEditSkill(players[index].skill.toString());
+    setIsEditing(true);
+  };
+
+  const saveEdit = (index: number) => {
+    const updated = [...players];
+    updated[index] = { name: editName, skill: parseFloat(editSkill) || 0 };
+    setPlayers(updated);
+    setIsEditing(false);
+    setExpandedPlayerIndex(null);
   };
 
   const distributeGroups = () => {
-    const groupCount = parseInt(numGroups);
-    if (!groupCount || groupCount < 1) {
-      setMessage('Please enter a valid number of groups.');
-      return;
-    }
+    const n = parseInt(numGroups);
+    if (isNaN(n) || n <= 0) return;
 
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teams: Player[][] = Array.from({ length: groupCount }, () => []);
-    const totals = new Array(groupCount).fill(0);
+    const teams: Player[][] = Array.from({ length: n }, () => []);
+    const totals = new Array(n).fill(0);
 
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
       teams[index].push(p);
       totals[index] += p.skill;
     }
-
     setGroups(teams);
   };
 
-  const removePlayer = (index: number) => {
-    const newList = [...players];
-    newList.splice(index, 1);
-    setPlayers(newList);
-    setExpandedPlayer(null);
-  };
+  const resetCheckIns = () => setCheckedInPlayers([]);
+  const logout = () => setIsAdmin(false);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -161,81 +162,79 @@ export default function App() {
         </View>
       ) : (
         <View>
-          <Text style={styles.subheader}>Players</Text>
+          <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)} style={styles.dropdownToggle}>
+            <Text style={styles.dropdownToggleText}>☰ Admin Panel ▾</Text>
+          </TouchableOpacity>
 
-          {players.map((p, i) => (
-            <View key={i} style={styles.playerCard}>
-              <TouchableOpacity onPress={() => setExpandedPlayer(expandedPlayer === i ? null : i)}>
-                <Text style={styles.playerText}>
-                  {p.name} (Skill: {p.skill}) {checkedInPlayers.includes(p.name) ? '✔️' : ''}
-                </Text>
-              </TouchableOpacity>
-
-              {expandedPlayer === i && (
-                editMode === i ? (
-                  <View style={styles.editBox}>
-                    <TextInput
-                      placeholder="Name"
-                      value={editName}
-                      onChangeText={setEditName}
-                      style={styles.input}
-                    />
-                    <TextInput
-                      placeholder="Skill"
-                      keyboardType="numeric"
-                      value={editSkill}
-                      onChangeText={setEditSkill}
-                      style={styles.input}
-                    />
-                    <View style={styles.buttonRow}>
-                      <Button title="Save" onPress={() => saveEditedPlayer(i)} />
-                      <Button title="Cancel" onPress={() => setEditMode(null)} />
-                    </View>
-                  </View>
-                ) : (
-                  <View style={styles.buttonRow}>
-                    <Button title="Check In" color="#4caf50" onPress={() => {
-                      if (!checkedInPlayers.includes(p.name)) {
-                        setCheckedInPlayers([...checkedInPlayers, p.name]);
-                      }
-                    }} />
-                    <Button title="Edit" color="#2196f3" onPress={() => {
-                      setEditMode(i);
-                      setEditName(p.name);
-                      setEditSkill(p.skill.toString());
-                    }} />
-                    <Button title="Delete" color="#f44336" onPress={() => removePlayer(i)} />
-                  </View>
-                )
-              )}
+          {showDropdown && (
+            <View style={styles.dropdownMenu}>
+              <Button title="Players" onPress={() => { setSelectedAdminTab('Players'); setShowDropdown(false); }} />
+              <Button title="Groups" onPress={() => { setSelectedAdminTab('Groups'); setShowDropdown(false); }} />
             </View>
-          ))}
+          )}
 
-          <Text style={styles.subheader}>Group Settings</Text>
-          <TextInput
-            placeholder="Enter number of groups"
-            value={numGroups}
-            onChangeText={setNumGroups}
-            keyboardType="numeric"
-            style={styles.input}
-          />
-          <Button title="Generate Groups" onPress={distributeGroups} />
-
-          <Text style={styles.subheader}>Generated Groups</Text>
-          {groups.map((g, i) => (
-            <View key={i} style={styles.groupBox}>
-              <Text style={styles.groupTitle}>Group {i + 1}</Text>
-              {g.map((p, j) => (
-                <Text key={j}>{p.name} (Skill: {p.skill})</Text>
+          {selectedAdminTab === 'Players' && (
+            <View>
+              <Text style={styles.subheader}>Players</Text>
+              {players.map((p, i) => (
+                <View key={i} style={styles.playerRow}>
+                  <TouchableOpacity onPress={() => setExpandedPlayerIndex(i === expandedPlayerIndex ? null : i)}>
+                    <Text>{p.name} (Skill: {p.skill})</Text>
+                  </TouchableOpacity>
+                  {expandedPlayerIndex === i && (
+                    <View style={styles.expandedButtons}>
+                      <Button title="Check-In" onPress={() => handleCheckIn(p.name)} color="dodgerblue" />
+                      <Button title="Edit" onPress={() => handleEdit(i)} color="orange" />
+                      <Button title="Delete" onPress={() => handleDelete(i)} color="red" />
+                    </View>
+                  )}
+                  {isEditing && expandedPlayerIndex === i && (
+                    <View>
+                      <TextInput
+                        placeholder="New Name"
+                        value={editName}
+                        onChangeText={setEditName}
+                        style={styles.input}
+                      />
+                      <TextInput
+                        placeholder="New Skill"
+                        keyboardType="numeric"
+                        value={editSkill}
+                        onChangeText={setEditSkill}
+                        style={styles.input}
+                      />
+                      <Button title="Save" onPress={() => saveEdit(i)} color="green" />
+                    </View>
+                  )}
+                </View>
               ))}
             </View>
-          ))}
+          )}
 
-          <View style={{ marginTop: 30 }}>
-            <Button title="Reset All Check-Ins" color="#ff9800" onPress={resetCheckIns} />
-            <View style={{ marginTop: 10 }} />
-            <Button title="Logout" color="#9e9e9e" onPress={logoutAdmin} />
-          </View>
+          {selectedAdminTab === 'Groups' && (
+            <View>
+              <Text style={styles.subheader}>Groups</Text>
+              <TextInput
+                placeholder="Number of groups"
+                keyboardType="numeric"
+                value={numGroups}
+                onChangeText={setNumGroups}
+                style={styles.input}
+              />
+              <Button title="Generate Groups" onPress={distributeGroups} />
+              {groups.map((g, i) => (
+                <View key={i} style={styles.groupBox}>
+                  <Text style={styles.groupTitle}>Group {i + 1}</Text>
+                  {g.map((p, j) => (
+                    <Text key={j}>{p.name} (Skill: {p.skill})</Text>
+                  ))}
+                </View>
+              ))}
+            </View>
+          )}
+
+          <Button title="Reset All Check-Ins" onPress={resetCheckIns} color="orange" />
+          <Button title="Logout" onPress={logout} color="red" />
         </View>
       )}
     </ScrollView>
@@ -248,31 +247,31 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1, padding: 8, marginBottom: 10, borderRadius: 5, backgroundColor: '#fff'
   },
-  subheader: { fontSize: 20, marginTop: 20, marginBottom: 10 },
+  subheader: { fontSize: 20, marginTop: 20 },
   message: { marginTop: 10, color: 'green' },
-  playerCard: {
+  playerRow: {
     marginTop: 10,
     backgroundColor: '#eee',
     padding: 10,
-    borderRadius: 6
+    borderRadius: 6,
   },
-  playerText: {
-    fontSize: 16,
-    fontWeight: '500'
+  expandedButtons: {
+    flexDirection: 'row', justifyContent: 'space-around', marginTop: 10
   },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10
-  },
-  editBox: {
-    marginTop: 10
-  },
+  picker: { backgroundColor: '#fff', marginBottom: 10 },
   groupBox: {
-    marginTop: 10,
+    marginTop: 15,
     padding: 10,
     backgroundColor: '#f2f2f2',
     borderRadius: 8
   },
   groupTitle: { fontWeight: 'bold', marginBottom: 5 },
+  dropdownToggle: { marginBottom: 10, padding: 8, backgroundColor: '#ddd', borderRadius: 5 },
+  dropdownToggleText: { fontSize: 16, textAlign: 'center' },
+  dropdownMenu: {
+    marginBottom: 10,
+    backgroundColor: '#eee',
+    borderRadius: 5,
+    padding: 8
+  }
 });
