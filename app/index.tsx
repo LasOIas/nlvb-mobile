@@ -21,12 +21,11 @@ export default function App() {
   const [groups, setGroups] = useState<Player[][]>([]);
   const [numGroups, setNumGroups] = useState('2');
   const [message, setMessage] = useState('');
-  const [expandedPlayerIndex, setExpandedPlayerIndex] = useState<number | null>(null);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [editModeIndex, setEditModeIndex] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editSkill, setEditSkill] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedAdminTab, setSelectedAdminTab] = useState<'Players' | 'Groups'>('Players');
+  const [activeTab, setActiveTab] = useState<'players' | 'settings'>('players');
 
   useEffect(() => {
     const loadData = async () => {
@@ -87,41 +86,44 @@ export default function App() {
     }
   };
 
-  const handleCheckIn = (name: string) => {
-    if (!checkedInPlayers.includes(name)) {
-      setCheckedInPlayers([...checkedInPlayers, name]);
-    }
-  };
-
-  const handleDelete = (index: number) => {
-    const updated = [...players];
-    updated.splice(index, 1);
-    setPlayers(updated);
-    setCheckedInPlayers(checkedInPlayers.filter(name => name !== players[index].name));
+  const toggleExpand = (index: number) => {
+    setExpandedIndex(expandedIndex === index ? null : index);
+    setEditModeIndex(null);
   };
 
   const handleEdit = (index: number) => {
+    setEditModeIndex(index);
     setEditName(players[index].name);
     setEditSkill(players[index].skill.toString());
-    setIsEditing(true);
   };
 
   const saveEdit = (index: number) => {
     const updated = [...players];
     updated[index] = { name: editName, skill: parseFloat(editSkill) || 0 };
     setPlayers(updated);
-    setIsEditing(false);
-    setExpandedPlayerIndex(null);
+    setEditModeIndex(null);
+  };
+
+  const removePlayer = (index: number) => {
+    const updated = players.filter((_, i) => i !== index);
+    setPlayers(updated);
+    setCheckedInPlayers(prev => prev.filter(n => n !== players[index].name));
+    setExpandedIndex(null);
+  };
+
+  const checkInFromAdmin = (name: string) => {
+    if (!checkedInPlayers.includes(name)) {
+      setCheckedInPlayers([...checkedInPlayers, name]);
+    }
   };
 
   const distributeGroups = () => {
-    const n = parseInt(numGroups);
-    if (isNaN(n) || n <= 0) return;
-
+    const count = parseInt(numGroups);
+    if (!count || count <= 0) return;
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teams: Player[][] = Array.from({ length: n }, () => []);
-    const totals = new Array(n).fill(0);
+    const teams: Player[][] = Array.from({ length: count }, () => []);
+    const totals = new Array(count).fill(0);
 
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
@@ -132,78 +134,59 @@ export default function App() {
   };
 
   const resetCheckIns = () => setCheckedInPlayers([]);
-  const logout = () => setIsAdmin(false);
+  const logoutAdmin = () => setIsAdmin(false);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={styles.header}>NLVB App</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>NLVB App</Text>
+        {isAdmin && (
+          <View style={styles.badge}><Text style={styles.badgeText}>{checkedInPlayers.length}</Text></View>
+        )}
+      </View>
 
       {!isAdmin ? (
         <View>
-          <TextInput
-            placeholder="Your name"
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-          />
+          <TextInput placeholder="Your name" style={styles.input} value={name} onChangeText={setName} />
           <Button title="Check In" onPress={checkInPlayer} />
           <Button title="Register" onPress={registerPlayer} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
 
           <Text style={styles.subheader}>Admin Login</Text>
-          <TextInput
-            placeholder="Admin code"
-            style={styles.input}
-            secureTextEntry
-            value={adminCode}
-            onChangeText={setAdminCode}
-          />
+          <TextInput placeholder="Admin code" style={styles.input} secureTextEntry value={adminCode} onChangeText={setAdminCode} />
           <Button title="Login as Admin" onPress={loginAdmin} />
         </View>
       ) : (
         <View>
-          <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)} style={styles.dropdownToggle}>
-            <Text style={styles.dropdownToggleText}>☰ Admin Panel ▾</Text>
-          </TouchableOpacity>
+          <View style={styles.tabRow}>
+            <TouchableOpacity onPress={() => setActiveTab('players')} style={[styles.tab, activeTab === 'players' && styles.activeTab]}>
+              <Text>Players</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setActiveTab('settings')} style={[styles.tab, activeTab === 'settings' && styles.activeTab]}>
+              <Text>Settings</Text>
+            </TouchableOpacity>
+          </View>
 
-          {showDropdown && (
-            <View style={styles.dropdownMenu}>
-              <Button title="Players" onPress={() => { setSelectedAdminTab('Players'); setShowDropdown(false); }} />
-              <Button title="Groups" onPress={() => { setSelectedAdminTab('Groups'); setShowDropdown(false); }} />
-            </View>
-          )}
-
-          {selectedAdminTab === 'Players' && (
+          {activeTab === 'players' && (
             <View>
               <Text style={styles.subheader}>Players</Text>
               {players.map((p, i) => (
-                <View key={i} style={styles.playerRow}>
-                  <TouchableOpacity onPress={() => setExpandedPlayerIndex(i === expandedPlayerIndex ? null : i)}>
+                <View key={i} style={styles.playerBox}>
+                  <TouchableOpacity onPress={() => toggleExpand(i)}>
                     <Text>{p.name} (Skill: {p.skill})</Text>
                   </TouchableOpacity>
-                  {expandedPlayerIndex === i && (
-                    <View style={styles.expandedButtons}>
-                      <Button title="Check-In" onPress={() => handleCheckIn(p.name)} color="dodgerblue" />
-                      <Button title="Edit" onPress={() => handleEdit(i)} color="orange" />
-                      <Button title="Delete" onPress={() => handleDelete(i)} color="red" />
+                  {expandedIndex === i && (
+                    <View style={styles.inlineBtns}>
+                      <Button title="Check In" onPress={() => checkInFromAdmin(p.name)} color="green" />
+                      <Button title="Edit" onPress={() => handleEdit(i)} color="blue" />
+                      <Button title="Delete" onPress={() => removePlayer(i)} color="red" />
                     </View>
                   )}
-                  {isEditing && expandedPlayerIndex === i && (
+                  {editModeIndex === i && (
                     <View>
-                      <TextInput
-                        placeholder="New Name"
-                        value={editName}
-                        onChangeText={setEditName}
-                        style={styles.input}
-                      />
-                      <TextInput
-                        placeholder="New Skill"
-                        keyboardType="numeric"
-                        value={editSkill}
-                        onChangeText={setEditSkill}
-                        style={styles.input}
-                      />
-                      <Button title="Save" onPress={() => saveEdit(i)} color="green" />
+                      <TextInput value={editName} onChangeText={setEditName} placeholder="Name" style={styles.input} />
+                      <TextInput value={editSkill} onChangeText={setEditSkill} placeholder="Skill" style={styles.input} keyboardType="numeric" />
+                      <Button title="Save" onPress={() => saveEdit(i)} />
                     </View>
                   )}
                 </View>
@@ -211,17 +194,18 @@ export default function App() {
             </View>
           )}
 
-          {selectedAdminTab === 'Groups' && (
+          {activeTab === 'settings' && (
             <View>
-              <Text style={styles.subheader}>Groups</Text>
+              <Text style={styles.subheader}>Group Settings</Text>
               <TextInput
-                placeholder="Number of groups"
-                keyboardType="numeric"
+                placeholder="Number of Groups"
                 value={numGroups}
                 onChangeText={setNumGroups}
+                keyboardType="numeric"
                 style={styles.input}
               />
               <Button title="Generate Groups" onPress={distributeGroups} />
+
               {groups.map((g, i) => (
                 <View key={i} style={styles.groupBox}>
                   <Text style={styles.groupTitle}>Group {i + 1}</Text>
@@ -230,11 +214,11 @@ export default function App() {
                   ))}
                 </View>
               ))}
+
+              <Button title="Reset Check-Ins" onPress={resetCheckIns} color="orange" />
+              <Button title="Logout" onPress={logoutAdmin} color="black" />
             </View>
           )}
-
-          <Button title="Reset All Check-Ins" onPress={resetCheckIns} color="orange" />
-          <Button title="Logout" onPress={logout} color="red" />
         </View>
       )}
     </ScrollView>
@@ -243,22 +227,23 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
-  header: { fontSize: 26, fontWeight: 'bold', marginBottom: 20 },
+  header: { fontSize: 26, fontWeight: 'bold' },
   input: {
-    borderWidth: 1, padding: 8, marginBottom: 10, borderRadius: 5, backgroundColor: '#fff'
+    borderWidth: 1, padding: 8, marginVertical: 5, borderRadius: 5, backgroundColor: '#fff'
   },
   subheader: { fontSize: 20, marginTop: 20 },
   message: { marginTop: 10, color: 'green' },
-  playerRow: {
+  playerBox: {
     marginTop: 10,
     backgroundColor: '#eee',
     padding: 10,
-    borderRadius: 6,
+    borderRadius: 6
   },
-  expandedButtons: {
-    flexDirection: 'row', justifyContent: 'space-around', marginTop: 10
+  inlineBtns: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 8
   },
-  picker: { backgroundColor: '#fff', marginBottom: 10 },
   groupBox: {
     marginTop: 15,
     padding: 10,
@@ -266,12 +251,34 @@ const styles = StyleSheet.create({
     borderRadius: 8
   },
   groupTitle: { fontWeight: 'bold', marginBottom: 5 },
-  dropdownToggle: { marginBottom: 10, padding: 8, backgroundColor: '#ddd', borderRadius: 5 },
-  dropdownToggleText: { fontSize: 16, textAlign: 'center' },
-  dropdownMenu: {
-    marginBottom: 10,
-    backgroundColor: '#eee',
-    borderRadius: 5,
-    padding: 8
+  tabRow: {
+    flexDirection: 'row',
+    marginVertical: 10,
+  },
+  tab: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: '#ddd',
+    alignItems: 'center'
+  },
+  activeTab: {
+    backgroundColor: '#bbb'
+  },
+  badge: {
+    backgroundColor: 'tomato',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 10
+  },
+  badgeText: {
+    color: 'white',
+    fontWeight: 'bold'
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20
   }
 });
