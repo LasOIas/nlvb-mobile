@@ -34,7 +34,7 @@ export default function App() {
   const [editedName, setEditedName] = useState('');
   const [editedSkill, setEditedSkill] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'players' | 'settings'>('players');
+  const [activeTab, setActiveTab] = useState<'players' | 'settings' | 'tournaments'>('players');
 
   useEffect(() => {
     const loadData = async () => {
@@ -190,6 +190,9 @@ export default function App() {
                 <Pressable onPress={() => setActiveTab('settings')} style={styles.dropdownItem}>
                   <Text style={styles.dropdownText}>Groups</Text>
                 </Pressable>
+                <Pressable onPress={() => setActiveTab('tournaments')} style={styles.dropdownItem}>
+                  <Text style={styles.dropdownText}>Tournaments</Text>
+                </Pressable>
               </View>
             )}
 
@@ -266,6 +269,15 @@ export default function App() {
                     ))}
                   </View>
                 ))}
+              </>
+            )}
+
+            {activeTab === 'tournaments' && (
+              <>
+                <Text style={styles.subheader}>Tournaments</Text>
+                <Text style={{ marginBottom: 10 }}>
+                  Tournament setup and management will go here.
+                </Text>
               </>
             )}
           </View>
