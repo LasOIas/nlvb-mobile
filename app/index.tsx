@@ -199,6 +199,17 @@ export default function App() {
     setNewTeamName('');
   };
 
+  const confirmResetTournament = () => {
+    Alert.alert(
+      'Confirm Reset',
+      'Are you sure you want to reset tournament settings?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Reset', style: 'destructive', onPress: resetTournament },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.fullScreen}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -337,7 +348,7 @@ export default function App() {
                   <Button title="Generate Bracket" onPress={generateBracket} />
                 )}
                 {tournamentTeams.length > 0 && (
-                  <Button title="Reset Tournament" color="#f44336" onPress={resetTournament} />
+                  <Button title="Reset Tournament" color="#f44336" onPress={confirmResetTournament} />
                 )}
 
                 <Text style={styles.subheader}>Teams</Text>
