@@ -199,6 +199,7 @@ export default function App() {
     setNewTeamName('');
   };
 
+  // 🛡️ CONFIRMATION PROMPTS
   const confirmResetTournament = () => {
     Alert.alert(
       'Confirm Reset',
@@ -206,6 +207,39 @@ export default function App() {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Reset', style: 'destructive', onPress: resetTournament },
+      ]
+    );
+  };
+
+  const confirmResetCheckIns = () => {
+    Alert.alert(
+      'Reset All Check-ins',
+      'Are you sure you want to reset all check-ins?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Reset', style: 'destructive', onPress: resetCheckIns },
+      ]
+    );
+  };
+
+  const confirmLogoutAdmin = () => {
+    Alert.alert(
+      'Logout Admin',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', style: 'default', onPress: logoutAdmin },
+      ]
+    );
+  };
+
+  const confirmRemovePlayer = (index: number) => {
+    Alert.alert(
+      'Delete Player',
+      'Are you sure you want to delete this player?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => removePlayer(index) },
       ]
     );
   };
@@ -283,7 +317,7 @@ export default function App() {
                       <View style={styles.actionsRow}>
                         <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.name)} />
                         <Button title="Edit" color="#2196F3" onPress={() => setEditModeIndex(i)} />
-                        <Button title="Delete" color="#f44336" onPress={() => removePlayer(i)} />
+                        <Button title="Delete" color="#f44336" onPress={() => confirmRemovePlayer(i)} />
                       </View>
                     )}
 
@@ -380,8 +414,8 @@ export default function App() {
 
       {isAdmin && (
         <View style={styles.bottomActions}>
-          <Button title="Reset All Check-ins" color="#f44336" onPress={resetCheckIns} />
-          <Button title="Logout" color="#888" onPress={logoutAdmin} />
+          <Button title="Reset All Check-ins" color="#f44336" onPress={confirmResetCheckIns} />
+          <Button title="Logout" color="#888" onPress={confirmLogoutAdmin} />
         </View>
       )}
     </SafeAreaView>
