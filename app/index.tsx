@@ -188,7 +188,7 @@ export default function App() {
                   <Text style={styles.dropdownText}>Players</Text>
                 </Pressable>
                 <Pressable onPress={() => setActiveTab('settings')} style={styles.dropdownItem}>
-                  <Text style={styles.dropdownText}>Settings</Text>
+                  <Text style={styles.dropdownText}>Groups</Text>
                 </Pressable>
               </View>
             )}
