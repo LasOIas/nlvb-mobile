@@ -36,6 +36,10 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'players' | 'settings' | 'tournaments'>('players');
 
+  const [tournamentTeams, setTournamentTeams] = useState<string[]>([]);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [bracketRounds, setBracketRounds] = useState<string[][][]>([]);
+
   useEffect(() => {
     const loadData = async () => {
       const savedPlayers = await AsyncStorage.getItem('players');
@@ -143,6 +147,50 @@ export default function App() {
     if (!checkedInPlayers.includes(name)) {
       setCheckedInPlayers([...checkedInPlayers, name]);
     }
+  };
+
+  const addTeamToTournament = () => {
+    const trimmed = newTeamName.trim();
+    if (trimmed && !tournamentTeams.includes(trimmed)) {
+      setTournamentTeams([...tournamentTeams, trimmed]);
+      setNewTeamName('');
+    }
+  };
+
+  const generateBracket = () => {
+    let currentRound = [...tournamentTeams];
+    const rounds: string[][][] = [];
+
+    while (currentRound.length > 1) {
+      const matchups: string[][] = [];
+
+      for (let i = 0; i < currentRound.length; i += 2) {
+        const team1 = currentRound[i];
+        const team2 = currentRound[i + 1] || 'BYE';
+        matchups.push([team1, team2]);
+      }
+
+      rounds.push(matchups);
+      currentRound = matchups.map(([team1, team2]) => (team2 === 'BYE' ? team1 : ''));
+    }
+
+    setBracketRounds(rounds);
+  };
+
+  const selectWinner = (roundIndex: number, matchIndex: number, winner: string) => {
+    const updatedRounds = [...bracketRounds];
+
+    if (!updatedRounds[roundIndex + 1]) {
+      updatedRounds[roundIndex + 1] = [];
+    }
+
+    const nextMatchIndex = Math.floor(matchIndex / 2);
+    if (!updatedRounds[roundIndex + 1][nextMatchIndex]) {
+      updatedRounds[roundIndex + 1][nextMatchIndex] = ['', ''];
+    }
+
+    updatedRounds[roundIndex + 1][nextMatchIndex][matchIndex % 2] = winner;
+    setBracketRounds(updatedRounds);
   };
 
   return (
@@ -275,9 +323,39 @@ export default function App() {
             {activeTab === 'tournaments' && (
               <>
                 <Text style={styles.subheader}>Tournaments</Text>
-                <Text style={{ marginBottom: 10 }}>
-                  Tournament setup and management will go here.
-                </Text>
+                <TextInput
+                  placeholder="Team Name"
+                  value={newTeamName}
+                  onChangeText={setNewTeamName}
+                  style={styles.input}
+                />
+                <Button title="Add Team" onPress={addTeamToTournament} />
+
+                {tournamentTeams.length > 1 && (
+                  <Button title="Generate Bracket" onPress={generateBracket} />
+                )}
+
+                <Text style={styles.subheader}>Teams</Text>
+                {tournamentTeams.map((team, i) => (
+                  <Text key={i}>{team}</Text>
+                ))}
+
+                {bracketRounds.map((round, i) => (
+                  <View key={i} style={{ marginTop: 20 }}>
+                    <Text style={styles.subheader}>Round {i + 1}</Text>
+                    {round.map(([team1, team2], j) => (
+                      <View key={j} style={styles.groupBox}>
+                        <Text>{team1} vs {team2}</Text>
+                        {team1 && team2 && (
+                          <View style={styles.actionsRow}>
+                            <Button title={`Winner: ${team1}`} onPress={() => selectWinner(i, j, team1)} />
+                            <Button title={`Winner: ${team2}`} onPress={() => selectWinner(i, j, team2)} />
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                ))}
               </>
             )}
           </View>
