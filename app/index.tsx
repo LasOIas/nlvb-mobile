@@ -193,6 +193,12 @@ export default function App() {
     setBracketRounds(updatedRounds);
   };
 
+  const resetTournament = () => {
+    setTournamentTeams([]);
+    setBracketRounds([]);
+    setNewTeamName('');
+  };
+
   return (
     <SafeAreaView style={styles.fullScreen}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -223,10 +229,7 @@ export default function App() {
           </View>
         ) : (
           <View>
-            <Pressable
-              style={styles.dropdownHeader}
-              onPress={() => setMenuOpen(!menuOpen)}
-            >
+            <Pressable style={styles.dropdownHeader} onPress={() => setMenuOpen(!menuOpen)}>
               <Text style={styles.dropdownHeaderText}>Menu ▼</Text>
             </Pressable>
 
@@ -330,9 +333,11 @@ export default function App() {
                   style={styles.input}
                 />
                 <Button title="Add Team" onPress={addTeamToTournament} />
-
                 {tournamentTeams.length > 1 && (
                   <Button title="Generate Bracket" onPress={generateBracket} />
+                )}
+                {tournamentTeams.length > 0 && (
+                  <Button title="Reset Tournament" color="#f44336" onPress={resetTournament} />
                 )}
 
                 <Text style={styles.subheader}>Teams</Text>
