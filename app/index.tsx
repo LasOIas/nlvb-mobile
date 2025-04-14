@@ -246,16 +246,18 @@ export default function App() {
   const distributeGroups = () => {
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
     const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
+  
     const teams: Player[][] = Array.from({ length: numGroups }, () => []);
     const totals = new Array(numGroups).fill(0);
-
+  
     for (const p of sorted) {
       const index = totals.indexOf(Math.min(...totals));
       teams[index].push(p);
       totals[index] += p.skill;
     }
+  
     setGroups(teams);
-  };
+  };  
 
   const styles = StyleSheet.create({
     fullScreen: { flex: 1 },
@@ -449,28 +451,38 @@ export default function App() {
             )}
             
             {activeTab === 'settings' && (
-              <>
-                <Text style={styles.subheader}>Group Settings</Text>
-                <TextInput
-                  placeholder="Number of Groups"
-                  keyboardType="numeric"
-                  value={numGroups.toString()}
-                  onChangeText={(v) => setNumGroups(parseInt(v) || 2)}
-                  style={styles.input}
-                />
-                <Button title="Generate Groups" onPress={distributeGroups} />
+  <>
+    <Text style={styles.subheader}>Group Settings</Text>
+    <TextInput
+      placeholder="Number of Groups"
+      keyboardType="numeric"
+      value={numGroups.toString()}
+      onChangeText={(v) => setNumGroups(parseInt(v) || 2)}
+      style={styles.input}
+    />
+    <Button title="Generate Groups" onPress={distributeGroups} />
+    {groups.length > 0 && (
+      <Button title="Regenerate" onPress={distributeGroups} color="#2196F3" />
+    )}
 
-                <Text style={styles.subheader}>Generated Groups</Text>
-                {groups.map((g, i) => (
-                  <View key={i} style={styles.groupBox}>
-                    <Text style={styles.groupTitle}>Group {i + 1}</Text>
-                    {g.map((p, j) => (
-                      <Text key={j}>{p.name} (Skill: {p.skill})</Text>
-                    ))}
-                  </View>
-                ))}
-              </>
-            )}
+    <Text style={styles.subheader}>Generated Groups</Text>
+    {groups.map((g, i) => {
+      const groupSkill = g.reduce((acc, p) => acc + p.skill, 0);
+      return (
+        <View key={i} style={styles.groupBox}>
+          <Text style={styles.groupTitle}>Group {i + 1}</Text>
+          <Text>Players: {g.length}</Text>
+          <Text>Total Skill: {groupSkill}</Text>
+          <View style={{ marginTop: 8 }}>
+            {g.map((p, j) => (
+              <Text key={j}>• {p.name} (Skill: {p.skill})</Text>
+            ))}
+          </View>
+        </View>
+      );
+    })}
+  </>
+)}
 
             {activeTab === 'tournaments' && (
               <>
