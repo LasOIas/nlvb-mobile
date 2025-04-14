@@ -246,19 +246,26 @@ export default function App() {
 
   const distributeGroups = () => {
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
-    const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
+  
+    // Shuffle players of the same skill level
+    const shuffled = [...eligible].sort((a, b) => {
+      if (a.skill === b.skill) {
+        return Math.random() - 0.5; // randomize same-skill players
+      }
+      return b.skill - a.skill; // keep descending order by skill
+    });
   
     const teams: Player[][] = Array.from({ length: numGroups }, () => []);
     const totals = new Array(numGroups).fill(0);
   
-    for (const p of sorted) {
-      const index = totals.indexOf(Math.min(...totals));
-      teams[index].push(p);
-      totals[index] += p.skill;
+    for (const player of shuffled) {
+      const index = totals.indexOf(Math.min(...totals)); // insert into weakest team
+      teams[index].push(player);
+      totals[index] += player.skill;
     }
   
     setGroups(teams);
-  };  
+  };    
 
   const styles = StyleSheet.create({
     fullScreen: { flex: 1 },
