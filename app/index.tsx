@@ -35,6 +35,7 @@ export default function App() {
   const [adminCode, setAdminCode] = useState('');
   const [groups, setGroups] = useState<Player[][]>([]);
   const [numGroups, setNumGroups] = useState(2);
+  const [numGroupsText, setNumGroupsText] = useState('2');
   const [message, setMessage] = useState('');
   const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null);
   const [editModeIndex, setEditModeIndex] = useState<number | null>(null);
@@ -454,12 +455,18 @@ export default function App() {
   <>
     <Text style={styles.subheader}>Group Settings</Text>
     <TextInput
-      placeholder="Number of Groups"
-      keyboardType="numeric"
-      value={numGroups.toString()}
-      onChangeText={(v) => setNumGroups(parseInt(v) || 2)}
-      style={styles.input}
-    />
+  placeholder="Number of Groups"
+  keyboardType="numeric"
+  value={numGroupsText}
+  onChangeText={(v) => {
+    setNumGroupsText(v);
+    const parsed = parseInt(v);
+    if (!isNaN(parsed) && parsed > 0) {
+      setNumGroups(parsed);
+    }
+  }}
+  style={styles.input}
+/>
     <Button title="Generate Groups" onPress={distributeGroups} />
     {groups.length > 0 && (
       <Button title="Regenerate" onPress={distributeGroups} color="#2196F3" />
