@@ -1,4 +1,3 @@
-// File: app/index.tsx
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -19,6 +18,14 @@ interface Player {
   skill: number;
 }
 
+interface TournamentTeam {
+  name: string;
+  members: string[];
+  rating: number;
+  wins: number;
+  losses: number;
+}
+
 export default function App() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [checkedInPlayers, setCheckedInPlayers] = useState<string[]>([]);
@@ -36,10 +43,10 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'players' | 'settings' | 'tournaments'>('players');
 
-  const [tournamentTeams, setTournamentTeams] = useState<string[]>([]);
+  const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
   const [bracketRounds, setBracketRounds] = useState<string[][][]>([]);
-
+  
   useEffect(() => {
     const loadData = async () => {
       const savedPlayers = await AsyncStorage.getItem('players');
@@ -76,18 +83,44 @@ export default function App() {
     setTimeout(() => setMessage(''), 2000);
   };
 
-  const registerPlayer = () => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    const exists = players.some(p => normalize(p.name) === normalize(trimmed));
+  const registerPlayerAsAdmin = () => {
+    const trimmedName = name.trim();
+    const parsedSkill = parseInt(skill);
+
+    if (!trimmedName || isNaN(parsedSkill)) {
+      setMessage('Enter valid name and skill');
+      return;
+    }
+
+    const exists = players.some(p => normalize(p.name) === normalize(trimmedName));
     if (!exists) {
-      setPlayers([...players, { name: trimmed, skill: 0 }]);
-      setMessage('Registered. Waiting for admin to set skill.');
+      setPlayers([...players, { name: trimmedName, skill: parsedSkill }]);
+      setMessage('Player registered');
     } else {
       setMessage('Player already exists');
     }
+
     setName('');
+    setSkill('');
     setTimeout(() => setMessage(''), 2000);
+  };
+
+  const updatePlayer = (index: number) => {
+    const nameInput = editedName.trim();
+    const skillInput = parseFloat(editedSkill);
+    const updated = [...players];
+
+    if (nameInput) {
+      updated[index].name = nameInput;
+    }
+    if (!isNaN(skillInput)) {
+      updated[index].skill = skillInput;
+    }
+
+    setPlayers(updated);
+    setEditModeIndex(null);
+    setEditedName('');
+    setEditedSkill('');
   };
 
   const loginAdmin = () => {
@@ -105,110 +138,6 @@ export default function App() {
 
   const resetCheckIns = () => {
     setCheckedInPlayers([]);
-  };
-
-  const updatePlayer = (index: number) => {
-    const trimmedName = editedName.trim();
-    const newSkill = parseFloat(editedSkill);
-    if (!trimmedName || isNaN(newSkill)) return;
-    const updated = [...players];
-    updated[index] = { name: trimmedName, skill: newSkill };
-    setPlayers(updated);
-    setEditModeIndex(null);
-    setEditedName('');
-    setEditedSkill('');
-  };
-
-  const distributeGroups = () => {
-    const eligible = players.filter(p => checkedInPlayers.includes(p.name));
-    const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
-    const teams: Player[][] = Array.from({ length: numGroups }, () => []);
-    const totals = new Array(numGroups).fill(0);
-
-    for (const p of sorted) {
-      const index = totals.indexOf(Math.min(...totals));
-      teams[index].push(p);
-      totals[index] += p.skill;
-    }
-    setGroups(teams);
-  };
-
-  const togglePlayerExpand = (index: number) => {
-    setExpandedPlayer(expandedPlayer === index ? null : index);
-    setEditModeIndex(null);
-  };
-
-  const removePlayer = (index: number) => {
-    const updated = players.filter((_, i) => i !== index);
-    setPlayers(updated);
-  };
-
-  const checkInFromAdmin = (name: string) => {
-    if (!checkedInPlayers.includes(name)) {
-      setCheckedInPlayers([...checkedInPlayers, name]);
-    }
-  };
-
-  const addTeamToTournament = () => {
-    const trimmed = newTeamName.trim();
-    if (trimmed && !tournamentTeams.includes(trimmed)) {
-      setTournamentTeams([...tournamentTeams, trimmed]);
-      setNewTeamName('');
-    }
-  };
-
-  const generateBracket = () => {
-    let currentRound = [...tournamentTeams];
-    const rounds: string[][][] = [];
-
-    while (currentRound.length > 1) {
-      const matchups: string[][] = [];
-
-      for (let i = 0; i < currentRound.length; i += 2) {
-        const team1 = currentRound[i];
-        const team2 = currentRound[i + 1] || 'BYE';
-        matchups.push([team1, team2]);
-      }
-
-      rounds.push(matchups);
-      currentRound = matchups.map(([team1, team2]) => (team2 === 'BYE' ? team1 : ''));
-    }
-
-    setBracketRounds(rounds);
-  };
-
-  const selectWinner = (roundIndex: number, matchIndex: number, winner: string) => {
-    const updatedRounds = [...bracketRounds];
-
-    if (!updatedRounds[roundIndex + 1]) {
-      updatedRounds[roundIndex + 1] = [];
-    }
-
-    const nextMatchIndex = Math.floor(matchIndex / 2);
-    if (!updatedRounds[roundIndex + 1][nextMatchIndex]) {
-      updatedRounds[roundIndex + 1][nextMatchIndex] = ['', ''];
-    }
-
-    updatedRounds[roundIndex + 1][nextMatchIndex][matchIndex % 2] = winner;
-    setBracketRounds(updatedRounds);
-  };
-
-  const resetTournament = () => {
-    setTournamentTeams([]);
-    setBracketRounds([]);
-    setNewTeamName('');
-  };
-
-  // 🛡️ CONFIRMATION PROMPTS
-  const confirmResetTournament = () => {
-    Alert.alert(
-      'Confirm Reset',
-      'Are you sure you want to reset tournament settings?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset', style: 'destructive', onPress: resetTournament },
-      ]
-    );
   };
 
   const confirmResetCheckIns = () => {
@@ -232,17 +161,169 @@ export default function App() {
       ]
     );
   };
+  
+  const resetTournament = () => {
+    setTournamentTeams([]);
+    setBracketRounds([]);
+    setNewTeamName('');
+  };
 
-  const confirmRemovePlayer = (index: number) => {
+  const confirmResetTournament = () => {
     Alert.alert(
-      'Delete Player',
-      'Are you sure you want to delete this player?',
+      'Confirm Reset',
+      'Are you sure you want to reset tournament settings?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => removePlayer(index) },
+        { text: 'Reset', style: 'destructive', onPress: resetTournament },
       ]
     );
   };
+
+  const addTeamToTournament = () => {
+    const trimmed = newTeamName.trim();
+    if (
+      trimmed &&
+      !tournamentTeams.some(team => team.name.toLowerCase() === trimmed.toLowerCase())
+    ) {
+      const newTeam: TournamentTeam = {
+        name: trimmed,
+        members: [],
+        rating: 0,
+        wins: 0,
+        losses: 0
+      };
+      setTournamentTeams([...tournamentTeams, newTeam]);
+      setNewTeamName('');
+    }
+  };
+
+  const updateTeamStat = (index: number, key: 'wins' | 'losses', delta: number) => {
+    const updated = [...tournamentTeams];
+    updated[index][key] += delta;
+    setTournamentTeams(updated);
+  };
+
+  const promptUpdateRating = (index: number) => {
+    Alert.prompt(
+      'Update Rating',
+      `Enter new rating for ${tournamentTeams[index].name}`,
+      (value) => {
+        const rating = parseInt(value);
+        if (!isNaN(rating)) {
+          const updated = [...tournamentTeams];
+          updated[index].rating = rating;
+          setTournamentTeams(updated);
+        }
+      },
+      'plain-text',
+      tournamentTeams[index].rating.toString()
+    );
+  };
+
+  const promptAddMember = (index: number) => {
+    Alert.prompt(
+      'Add Member',
+      `Enter player name to add to ${tournamentTeams[index].name}`,
+      (value) => {
+        const trimmed = value.trim();
+        if (trimmed) {
+          const updated = [...tournamentTeams];
+          if (!updated[index].members.includes(trimmed)) {
+            updated[index].members.push(trimmed);
+            setTournamentTeams(updated);
+          }
+        }
+      }
+    );
+  };
+
+  const checkInFromAdmin = (name: string) => {
+    if (!checkedInPlayers.includes(name)) {
+      setCheckedInPlayers([...checkedInPlayers, name]);
+    }
+  };
+
+  const distributeGroups = () => {
+    const eligible = players.filter(p => checkedInPlayers.includes(p.name));
+    const sorted = [...eligible].sort((a, b) => b.skill - a.skill);
+    const teams: Player[][] = Array.from({ length: numGroups }, () => []);
+    const totals = new Array(numGroups).fill(0);
+
+    for (const p of sorted) {
+      const index = totals.indexOf(Math.min(...totals));
+      teams[index].push(p);
+      totals[index] += p.skill;
+    }
+    setGroups(teams);
+  };
+
+  const styles = StyleSheet.create({
+    fullScreen: { flex: 1 },
+    container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
+    header: { fontSize: 26, fontWeight: 'bold', marginBottom: 10 },
+    subheader: { fontSize: 20, marginTop: 20, marginBottom: 10 },
+    input: {
+      borderWidth: 1,
+      padding: 8,
+      marginBottom: 10,
+      borderRadius: 5,
+      backgroundColor: '#fff'
+    },
+    message: { marginTop: 10, color: 'green' },
+    playerRow: {
+      marginTop: 10,
+      backgroundColor: '#eee',
+      padding: 10,
+      borderRadius: 6
+    },
+    groupBox: {
+      marginTop: 15,
+      padding: 10,
+      backgroundColor: '#f2f2f2',
+      borderRadius: 8
+    },
+    groupTitle: { fontWeight: 'bold', marginBottom: 5 },
+    actionsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginTop: 10
+    },
+    dropdownHeader: {
+      backgroundColor: '#333',
+      padding: 10,
+      borderRadius: 4,
+      marginBottom: 5,
+    },
+    dropdownHeaderText: {
+      color: '#fff',
+      fontWeight: 'bold'
+    },
+    dropdownMenu: {
+      backgroundColor: '#333',
+      borderRadius: 4,
+      marginBottom: 10
+    },
+    dropdownItem: {
+      padding: 10,
+      borderBottomColor: '#555',
+      borderBottomWidth: 1,
+    },
+    dropdownText: {
+      color: '#fff'
+    },
+    bottomActions: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: '#fff',
+      padding: 10,
+      borderTopWidth: 1,
+      borderColor: '#ccc',
+      flexDirection: 'row',
+      justifyContent: 'space-around'
+    }
+  });
 
   return (
     <SafeAreaView style={styles.fullScreen}>
@@ -259,7 +340,6 @@ export default function App() {
               onChangeText={setName}
             />
             <Button title="Check In" onPress={checkInPlayer} />
-            <Button title="Register" onPress={registerPlayer} />
             {message ? <Text style={styles.message}>{message}</Text> : null}
 
             <Text style={styles.subheader}>Admin Login</Text>
@@ -294,19 +374,27 @@ export default function App() {
 
             {activeTab === 'players' && (
               <>
-                <Text style={styles.subheader}>Add New Player</Text>
+                <Text style={styles.subheader}>Register New Player</Text>
                 <TextInput
                   placeholder="Player Name"
                   style={styles.input}
                   value={name}
                   onChangeText={setName}
                 />
-                <Button title="Add Player" onPress={registerPlayer} />
+                <TextInput
+                  placeholder="Skill (0–100)"
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={skill}
+                  onChangeText={setSkill}
+                />
+                <Button title="Register Player" onPress={registerPlayerAsAdmin} />
+                {message ? <Text style={styles.message}>{message}</Text> : null}
 
                 <Text style={styles.subheader}>Players</Text>
                 {players.map((p, i) => (
                   <View key={i} style={styles.playerRow}>
-                    <TouchableOpacity onPress={() => togglePlayerExpand(i)}>
+                    <TouchableOpacity onPress={() => setExpandedPlayer(expandedPlayer === i ? null : i)}>
                       <Text>
                         {p.name} (Skill: {p.skill})
                         {checkedInPlayers.includes(p.name) ? ' ✅' : ''}
@@ -316,34 +404,50 @@ export default function App() {
                     {expandedPlayer === i && (
                       <View style={styles.actionsRow}>
                         <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.name)} />
-                        <Button title="Edit" color="#2196F3" onPress={() => setEditModeIndex(i)} />
-                        <Button title="Delete" color="#f44336" onPress={() => confirmRemovePlayer(i)} />
+                        <Button title="Edit" color="#2196F3" onPress={() => {
+                          setEditModeIndex(i);
+                          setEditedName(p.name);
+                          setEditedSkill(p.skill.toString());
+                        }} />
+                        <Button title="Delete" color="#f44336" onPress={() => {
+                          Alert.alert(
+                            'Confirm Delete',
+                            `Are you sure you want to delete ${p.name}?`,
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              { text: 'Delete', style: 'destructive', onPress: () => {
+                                const updated = players.filter((_, idx) => idx !== i);
+                                setPlayers(updated);
+                              }}
+                            ]
+                          );
+                        }} />
                       </View>
                     )}
 
                     {editModeIndex === i && (
                       <View>
                         <TextInput
-                          placeholder="Name"
+                          placeholder="Edit Name"
                           value={editedName}
                           style={styles.input}
                           onChangeText={setEditedName}
                         />
                         <TextInput
-                          placeholder="Skill"
+                          placeholder="Edit Skill"
                           keyboardType="numeric"
                           value={editedSkill}
                           style={styles.input}
                           onChangeText={setEditedSkill}
                         />
-                        <Button title="Save" onPress={() => updatePlayer(i)} />
+                        <Button title="Save Changes" onPress={() => updatePlayer(i)} />
                       </View>
                     )}
                   </View>
                 ))}
               </>
             )}
-
+            
             {activeTab === 'settings' && (
               <>
                 <Text style={styles.subheader}>Group Settings</Text>
@@ -378,32 +482,27 @@ export default function App() {
                   style={styles.input}
                 />
                 <Button title="Add Team" onPress={addTeamToTournament} />
-                {tournamentTeams.length > 1 && (
-                  <Button title="Generate Bracket" onPress={generateBracket} />
-                )}
                 {tournamentTeams.length > 0 && (
                   <Button title="Reset Tournament" color="#f44336" onPress={confirmResetTournament} />
                 )}
 
                 <Text style={styles.subheader}>Teams</Text>
                 {tournamentTeams.map((team, i) => (
-                  <Text key={i}>{team}</Text>
-                ))}
+                  <View key={i} style={styles.groupBox}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{team.name}</Text>
+                    <Text>Rating: {team.rating}</Text>
+                    <Text>Wins: {team.wins} | Losses: {team.losses}</Text>
+                    <Text>Members: {team.members.length > 0 ? team.members.join(', ') : 'None'}</Text>
 
-                {bracketRounds.map((round, i) => (
-                  <View key={i} style={{ marginTop: 20 }}>
-                    <Text style={styles.subheader}>Round {i + 1}</Text>
-                    {round.map(([team1, team2], j) => (
-                      <View key={j} style={styles.groupBox}>
-                        <Text>{team1} vs {team2}</Text>
-                        {team1 && team2 && (
-                          <View style={styles.actionsRow}>
-                            <Button title={`Winner: ${team1}`} onPress={() => selectWinner(i, j, team1)} />
-                            <Button title={`Winner: ${team2}`} onPress={() => selectWinner(i, j, team2)} />
-                          </View>
-                        )}
-                      </View>
-                    ))}
+                    <View style={styles.actionsRow}>
+                      <Button title="+ Win" onPress={() => updateTeamStat(i, 'wins', 1)} />
+                      <Button title="+ Loss" onPress={() => updateTeamStat(i, 'losses', 1)} />
+                    </View>
+
+                    <View style={styles.actionsRow}>
+                      <Button title="Edit Rating" onPress={() => promptUpdateRating(i)} />
+                      <Button title="Add Member" onPress={() => promptAddMember(i)} />
+                    </View>
                   </View>
                 ))}
               </>
@@ -421,71 +520,3 @@ export default function App() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  fullScreen: { flex: 1 },
-  container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
-  header: { fontSize: 26, fontWeight: 'bold', marginBottom: 10 },
-  subheader: { fontSize: 20, marginTop: 20, marginBottom: 10 },
-  input: {
-    borderWidth: 1,
-    padding: 8,
-    marginBottom: 10,
-    borderRadius: 5,
-    backgroundColor: '#fff'
-  },
-  message: { marginTop: 10, color: 'green' },
-  playerRow: {
-    marginTop: 10,
-    backgroundColor: '#eee',
-    padding: 10,
-    borderRadius: 6
-  },
-  groupBox: {
-    marginTop: 15,
-    padding: 10,
-    backgroundColor: '#f2f2f2',
-    borderRadius: 8
-  },
-  groupTitle: { fontWeight: 'bold', marginBottom: 5 },
-  actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 10
-  },
-  dropdownHeader: {
-    backgroundColor: '#333',
-    padding: 10,
-    borderRadius: 4,
-    marginBottom: 5,
-  },
-  dropdownHeaderText: {
-    color: '#fff',
-    fontWeight: 'bold'
-  },
-  dropdownMenu: {
-    backgroundColor: '#333',
-    borderRadius: 4,
-    marginBottom: 10
-  },
-  dropdownItem: {
-    padding: 10,
-    borderBottomColor: '#555',
-    borderBottomWidth: 1,
-  },
-  dropdownText: {
-    color: '#fff'
-  },
-  bottomActions: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    padding: 10,
-    borderTopWidth: 1,
-    borderColor: '#ccc',
-    flexDirection: 'row',
-    justifyContent: 'space-around'
-  }
-});
