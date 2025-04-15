@@ -47,6 +47,8 @@ export default function App() {
   const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
   const [bracketRounds, setBracketRounds] = useState<string[][][]>([]);
+  const [showBracket, setShowBracket] = useState(false);
+
   
   useEffect(() => {
     const loadData = async () => {
@@ -589,7 +591,24 @@ export default function App() {
                 {tournamentTeams.length > 0 && (
                   <Button title="Reset Tournament" color="#f44336" onPress={confirmResetTournament} />
                 )}
-  
+                <Button
+  title={showBracket ? "Hide Bracket" : "View Bracket"}
+  onPress={() => setShowBracket(!showBracket)}
+  color="#8e44ad"
+/>
+{showBracket && bracketRounds.length > 0 && (
+  <View style={{ marginTop: 20 }}>
+    {bracketRounds.map((round, i) => (
+      <View key={i} style={{ marginBottom: 20 }}>
+        <Text style={{ fontWeight: 'bold', marginBottom: 5 }}>Round {i + 1}</Text>
+        {round.map((match, j) => (
+          <Text key={j} style={{ marginLeft: 10 }}>• {match[0]} vs {match[1]}</Text>
+        ))}
+      </View>
+    ))}
+  </View>
+)}
+
                 <Text style={styles.subheader}>Teams</Text>
                 {tournamentTeams.map((team, i) => (
                   <View key={i} style={styles.groupBox}>
