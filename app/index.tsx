@@ -596,63 +596,7 @@ export default function App() {
   onPress={() => setShowBracket(!showBracket)}
   color="#8e44ad"
 />
-{showBracket && bracketRounds.length > 0 && (
-  <View style={{ marginTop: 20 }}>
-    {bracketRounds.map((round, roundIndex) => (
-      <View key={roundIndex} style={{ marginBottom: 24 }}>
-        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>
-          🌀 Round {roundIndex + 1}
-        </Text>
-
-        {round.map((match, matchIndex) => (
-          <View
-            key={matchIndex}
-            style={{
-              backgroundColor: '#fff',
-              borderColor: '#ccc',
-              borderWidth: 1,
-              borderRadius: 10,
-              paddingVertical: 12,
-              paddingHorizontal: 16,
-              marginBottom: 12,
-              alignItems: 'center',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 2,
-            }}
-          >
-            <Text style={{ fontSize: 16, fontWeight: '600' }}>🏆 {match[0]}</Text>
-            <Text style={{ color: '#888', marginVertical: 6 }}>vs</Text>
-            <Text style={{ fontSize: 16, fontWeight: '600' }}>🏆 {match[1]}</Text>
-          </View>
-        ))}
-      </View>
-    ))}
-  </View>
-)}
-
-                <Text style={styles.subheader}>Teams</Text>
-                {tournamentTeams.map((team, i) => (
-                  <View key={i} style={styles.groupBox}>
-                    <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{team.name}</Text>
-                    <Text>Rating: {team.rating}</Text>
-                    <Text>Wins: {team.wins} | Losses: {team.losses}</Text>
-                    <Text>Members: {team.members.length > 0 ? team.members.join(', ') : 'None'}</Text>
-  
-                    <View style={styles.actionsRow}>
-                      <Button title="+ Win" onPress={() => updateTeamStat(i, 'wins', 1)} />
-                      <Button title="+ Loss" onPress={() => updateTeamStat(i, 'losses', 1)} />
-                    </View>
-  
-                    <View style={styles.actionsRow}>
-                      <Button title="Edit Rating" onPress={() => promptUpdateRating(i)} />
-                      <Button title="Add Member" onPress={() => promptAddMember(i)} />
-                    </View>
-                  </View>
-                ))}
-                {bracketRounds.length > 0 && (
+{bracketRounds.length > 0 && (
   <View style={{ marginTop: 20 }}>
     <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 10 }}>Bracket</Text>
     {bracketRounds.map((round, roundIndex) => (
@@ -681,6 +625,27 @@ export default function App() {
     ))}
   </View>
 )}
+
+                <Text style={styles.subheader}>Teams</Text>
+                {tournamentTeams.map((team, i) => (
+                  <View key={i} style={styles.groupBox}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{team.name}</Text>
+                    <Text>Rating: {team.rating}</Text>
+                    <Text>Wins: {team.wins} | Losses: {team.losses}</Text>
+                    <Text>Members: {team.members.length > 0 ? team.members.join(', ') : 'None'}</Text>
+  
+                    <View style={styles.actionsRow}>
+                      <Button title="+ Win" onPress={() => updateTeamStat(i, 'wins', 1)} />
+                      <Button title="+ Loss" onPress={() => updateTeamStat(i, 'losses', 1)} />
+                    </View>
+  
+                    <View style={styles.actionsRow}>
+                      <Button title="Edit Rating" onPress={() => promptUpdateRating(i)} />
+                      <Button title="Add Member" onPress={() => promptAddMember(i)} />
+                    </View>
+                  </View>
+                ))}
+                
 
               </>
             )}
