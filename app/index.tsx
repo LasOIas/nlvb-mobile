@@ -29,6 +29,10 @@ interface TournamentTeam {
 export default function App() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [checkedInPlayers, setCheckedInPlayers] = useState<string[]>([]);
+  // 🚀 Load saved data when app starts
+useEffect(() => {
+  loadData();
+}, []);
   const [name, setName] = useState('');
   const [skill, setSkill] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
