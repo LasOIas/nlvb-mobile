@@ -622,42 +622,67 @@ const [rounds, setRounds] = useState<string[][][]>([]); // 3D array: rounds → 
 />
 {showBracket && rounds.length > 0 && (
   <View style={{ marginTop: 20 }}>
-    <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 10 }}>🏆 Bracket</Text>
+    <Text style={{ fontWeight: 'bold', fontSize: 22, marginBottom: 16, color: '#4A90E2' }}>🏆 Tournament Bracket</Text>
+
     {rounds.map((round, roundIndex) => (
-      <View key={roundIndex} style={{ marginBottom: 20 }}>
-        <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 6 }}>
-          Round {roundIndex + 1}
+      <View key={roundIndex} style={{ marginBottom: 28 }}>
+        <Text style={{
+          fontSize: 18,
+          fontWeight: 'bold',
+          color: '#7b61ff',
+          marginBottom: 12,
+          textAlign: 'center'
+        }}>
+          🌀 Round {roundIndex + 1}
         </Text>
+
         {round.map((match, matchIndex) => (
           <View
             key={matchIndex}
             style={{
-              backgroundColor: '#e6e6e6',
-              borderRadius: 6,
-              padding: 10,
-              marginBottom: 8,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
+              backgroundColor: '#ffffff',
+              borderRadius: 10,
+              padding: 16,
+              marginBottom: 12,
+              marginHorizontal: 10,
+              borderWidth: 1,
+              borderColor: '#ccc',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 3.84,
+              elevation: 5,
             }}
           >
-            {match.map((team, teamIndex) => (
-              <TouchableOpacity
-                key={teamIndex}
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  padding: 10,
-                  backgroundColor: '#fff',
-                  marginHorizontal: 5,
-                  borderRadius: 4,
-                  borderWidth: 2,
-                  borderColor: '#888',
-                }}
-                onPress={() => handleWinnerSelect(roundIndex, matchIndex, team)}
-              >
-                <Text style={{ fontWeight: 'bold' }}>{team}</Text>
-              </TouchableOpacity>
-            ))}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              {match.map((team, teamIndex) => {
+                const winnerSelected = rounds[roundIndex][matchIndex][0] === team;
+                return (
+                  <TouchableOpacity
+                    key={teamIndex}
+                    style={{
+                      flex: 1,
+                      marginHorizontal: 5,
+                      padding: 12,
+                      borderRadius: 6,
+                      backgroundColor: winnerSelected ? '#d1f7c4' : '#f0f0f0',
+                      borderColor: winnerSelected ? '#4CAF50' : '#bbb',
+                      borderWidth: 2,
+                      alignItems: 'center',
+                    }}
+                    onPress={() => handleWinnerSelect(roundIndex, matchIndex, team)}
+                  >
+                    <Text style={{
+                      fontWeight: 'bold',
+                      fontSize: 15,
+                      color: '#333'
+                    }}>
+                      {team}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         ))}
       </View>
