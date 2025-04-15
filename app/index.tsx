@@ -277,7 +277,8 @@ export default function App() {
       padding: 8,
       marginBottom: 10,
       borderRadius: 5,
-      backgroundColor: '#fff'
+      backgroundColor: '#fff',
+      color: '#333',
     },
     message: { marginTop: 10, color: 'green' },
     playerRow: {
