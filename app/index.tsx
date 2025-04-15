@@ -202,11 +202,11 @@ useEffect(() => {
     );
   };
   
-  const resetTournament = () => {
+  const resetTournament = async () => {
     setTournamentTeams([]);
-    // Removed as setBracketRounds is not defined
+    await AsyncStorage.removeItem(STORAGE_KEYS.tournamentTeams);
     setNewTeamName('');
-  };
+  };  
 
   const confirmResetTournament = () => {
     Alert.alert(
@@ -219,24 +219,27 @@ useEffect(() => {
     );
   };
 
-  const addTeamToTournament = () => {
-    const trimmed = newTeamName.trim();
-    if (
-      trimmed &&
-      !tournamentTeams.some(team => team.name.toLowerCase() === trimmed.toLowerCase())
-    ) {
-      const newTeam: TournamentTeam = {
-        name: trimmed,
-        members: [],
-        rating: 0,
-        wins: 0,
-        losses: 0
-      };
-      setTournamentTeams([...tournamentTeams, newTeam]);
-      setNewTeamName('');
-    }
-  };
-  const generateBracket = () => {
+  const addTeamToTournament = async () => {
+  const trimmed = newTeamName.trim();
+  if (
+    trimmed &&
+    !tournamentTeams.some(team => team.name.toLowerCase() === trimmed.toLowerCase())
+  ) {
+    const newTeam: TournamentTeam = {
+      name: trimmed,
+      members: [],
+      rating: 0,
+      wins: 0,
+      losses: 0
+    };
+    const updated = [...tournamentTeams, newTeam];
+    setTournamentTeams(updated);
+    await AsyncStorage.setItem(STORAGE_KEYS.tournamentTeams, JSON.stringify(updated)); // 🧠 force save
+    setNewTeamName('');
+  }
+};
+
+const generateBracket = () => {
     const shuffled = [...tournamentTeams.map(t => t.name)];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -305,18 +308,19 @@ useEffect(() => {
     Alert.prompt(
       'Add Member',
       `Enter player name to add to ${tournamentTeams[index].name}`,
-      (value) => {
+      async (value) => {
         const trimmed = value.trim();
         if (trimmed) {
           const updated = [...tournamentTeams];
           if (!updated[index].members.includes(trimmed)) {
             updated[index].members.push(trimmed);
             setTournamentTeams(updated);
+            await AsyncStorage.setItem(STORAGE_KEYS.tournamentTeams, JSON.stringify(updated)); // 💾 Save to memory!
           }
         }
       }
     );
-  };
+  };;
 
   const checkInFromAdmin = (name: string) => {
     if (!checkedInPlayers.includes(name)) {
