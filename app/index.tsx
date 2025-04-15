@@ -598,11 +598,35 @@ export default function App() {
 />
 {showBracket && bracketRounds.length > 0 && (
   <View style={{ marginTop: 20 }}>
-    {bracketRounds.map((round, i) => (
-      <View key={i} style={{ marginBottom: 20 }}>
-        <Text style={{ fontWeight: 'bold', marginBottom: 5 }}>Round {i + 1}</Text>
-        {round.map((match, j) => (
-          <Text key={j} style={{ marginLeft: 10 }}>• {match[0]} vs {match[1]}</Text>
+    {bracketRounds.map((round, roundIndex) => (
+      <View key={roundIndex} style={{ marginBottom: 24 }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>
+          🌀 Round {roundIndex + 1}
+        </Text>
+
+        {round.map((match, matchIndex) => (
+          <View
+            key={matchIndex}
+            style={{
+              backgroundColor: '#fff',
+              borderColor: '#ccc',
+              borderWidth: 1,
+              borderRadius: 10,
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              marginBottom: 12,
+              alignItems: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 2,
+            }}
+          >
+            <Text style={{ fontSize: 16, fontWeight: '600' }}>🏆 {match[0]}</Text>
+            <Text style={{ color: '#888', marginVertical: 6 }}>vs</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600' }}>🏆 {match[1]}</Text>
+          </View>
         ))}
       </View>
     ))}
