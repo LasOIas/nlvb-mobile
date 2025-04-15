@@ -69,8 +69,8 @@ const loadData = async () => {
   const savedRounds = await AsyncStorage.getItem(STORAGE_KEYS.rounds);
   const savedTab = await AsyncStorage.getItem(STORAGE_KEYS.activeTab);
   const savedAdmin = await AsyncStorage.getItem('isAdmin');
-if (savedAdmin) setIsAdmin(JSON.parse(savedAdmin));
 
+  if (savedAdmin) setIsAdmin(JSON.parse(savedAdmin));
   setPlayers(savedPlayers ? JSON.parse(savedPlayers) : []);
   setCheckedInPlayers(savedCheckins ? JSON.parse(savedCheckins) : []);
   setTournamentTeams(savedTeams ? JSON.parse(savedTeams) : []);
@@ -79,7 +79,11 @@ if (savedAdmin) setIsAdmin(JSON.parse(savedAdmin));
   if (savedTab) setActiveTab(savedTab as any);
 };
 
-  useEffect(() => {
+useEffect(() => {
+  loadData();
+}, []);
+
+useEffect(() => {
     AsyncStorage.setItem('players', JSON.stringify(players));
   }, [players]);
 
