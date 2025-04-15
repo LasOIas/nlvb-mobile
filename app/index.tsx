@@ -375,6 +375,7 @@ export default function App() {
           <View>
             <TextInput
               placeholder="Your name"
+              placeholderTextColor="#333"
               style={styles.input}
               value={name}
               onChangeText={setName}
@@ -385,6 +386,7 @@ export default function App() {
             <Text style={styles.subheader}>Admin Login</Text>
             <TextInput
               placeholder="Admin code"
+              placeholderTextColor="#333"
               style={styles.input}
               secureTextEntry
               value={adminCode}
@@ -419,12 +421,14 @@ export default function App() {
                 <Text style={styles.subheader}>Register New Player</Text>
                 <TextInput
                   placeholder="Player Name"
+                  placeholderTextColor="#333"
                   style={styles.input}
                   value={name}
                   onChangeText={setName}
                 />
                 <TextInput
                   placeholder="Skill (0–100)"
+                  placeholderTextColor="#333"
                   style={styles.input}
                   keyboardType="numeric"
                   value={skill}
@@ -471,12 +475,14 @@ export default function App() {
                       <View>
                         <TextInput
                           placeholder="Edit Name"
+                          placeholderTextColor="#333"
                           value={editedName}
                           style={styles.input}
                           onChangeText={setEditedName}
                         />
                         <TextInput
                           placeholder="Edit Skill"
+                          placeholderTextColor="#333"
                           keyboardType="numeric"
                           value={editedSkill}
                           style={styles.input}
@@ -497,6 +503,7 @@ export default function App() {
 
     <TextInput
       placeholder="Number of Groups"
+      placeholderTextColor="#333"
       keyboardType="numeric"
       value={numGroupsText}
       onChangeText={(text) => {
@@ -542,6 +549,7 @@ export default function App() {
                 <Text style={styles.subheader}>Tournaments</Text>
                 <TextInput
                   placeholder="Team Name"
+                  placeholderTextColor="#333"
                   value={newTeamName}
                   onChangeText={setNewTeamName}
                   style={styles.input}
