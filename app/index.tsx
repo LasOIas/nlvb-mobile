@@ -393,6 +393,7 @@ export default function App() {
           </View>
         ) : (
           <View>
+            {/* 🧩 Dropdown Menu */}
             <Pressable style={styles.dropdownHeader} onPress={() => setMenuOpen(!menuOpen)}>
               <Text style={styles.dropdownHeaderText}>Menu ▼</Text>
             </Pressable>
@@ -411,27 +412,96 @@ export default function App() {
               </View>
             )}
   
+            {/* 📋 Players Tab */}
             {activeTab === 'players' && (
               <>
-                {/* players UI... unchanged */}
+                <Text style={styles.subheader}>Register New Player</Text>
+                <TextInput
+                  placeholder="Player Name"
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                />
+                <TextInput
+                  placeholder="Skill (0–100)"
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={skill}
+                  onChangeText={setSkill}
+                />
+                <Button title="Register Player" onPress={registerPlayerAsAdmin} />
+                {message ? <Text style={styles.message}>{message}</Text> : null}
+  
+                <Text style={styles.subheader}>Players</Text>
+                {players.map((p, i) => (
+                  <View key={i} style={styles.playerRow}>
+                    <TouchableOpacity onPress={() => setExpandedPlayer(expandedPlayer === i ? null : i)}>
+                      <Text>
+                        {p.name} (Skill: {p.skill})
+                        {checkedInPlayers.includes(p.name) ? ' ✅' : ''}
+                      </Text>
+                    </TouchableOpacity>
+  
+                    {expandedPlayer === i && (
+                      <View style={styles.actionsRow}>
+                        <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.name)} />
+                        <Button title="Edit" color="#2196F3" onPress={() => {
+                          setEditModeIndex(i);
+                          setEditedName(p.name);
+                          setEditedSkill(p.skill.toString());
+                        }} />
+                        <Button title="Delete" color="#f44336" onPress={() => {
+                          Alert.alert(
+                            'Confirm Delete',
+                            `Are you sure you want to delete ${p.name}?`,
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              { text: 'Delete', style: 'destructive', onPress: () => {
+                                const updated = players.filter((_, idx) => idx !== i);
+                                setPlayers(updated);
+                              }}
+                            ]
+                          );
+                        }} />
+                      </View>
+                    )}
+  
+                    {editModeIndex === i && (
+                      <View>
+                        <TextInput
+                          placeholder="Edit Name"
+                          value={editedName}
+                          style={styles.input}
+                          onChangeText={setEditedName}
+                        />
+                        <TextInput
+                          placeholder="Edit Skill"
+                          keyboardType="numeric"
+                          value={editedSkill}
+                          style={styles.input}
+                          onChangeText={setEditedSkill}
+                        />
+                        <Button title="Save Changes" onPress={() => updatePlayer(i)} />
+                      </View>
+                    )}
+                  </View>
+                ))}
               </>
             )}
   
+            {/* 🧠 Groups Tab */}
             {activeTab === 'settings' && (
               <>
                 <Text style={styles.subheader}>Generated Groups</Text>
-  
                 {groups.map((g, i) => {
                   const groupSkill = g.reduce((acc, p) => acc + p.skill, 0);
                   return (
                     <View key={i} style={styles.groupBox}>
                       <Text style={styles.groupTitle}>Group {i + 1}</Text>
-  
                       <View style={styles.groupMetaRow}>
                         <Text style={styles.groupMetaText}>Players: {g.length}</Text>
                         <Text style={styles.groupMetaText}>Total Skill: {groupSkill}</Text>
                       </View>
-  
                       <View style={styles.groupPlayers}>
                         {g.map((p, j) => (
                           <Text key={j} style={styles.groupPlayerText}>
@@ -443,7 +513,6 @@ export default function App() {
                   );
                 })}
   
-                {/* ✅ Moved inside the scroll content properly */}
                 <TextInput
                   placeholder="Number of Groups"
                   keyboardType="numeric"
@@ -463,9 +532,40 @@ export default function App() {
               </>
             )}
   
+            {/* 🏆 Tournaments Tab */}
             {activeTab === 'tournaments' && (
               <>
-                {/* tournaments UI... unchanged */}
+                <Text style={styles.subheader}>Tournaments</Text>
+                <TextInput
+                  placeholder="Team Name"
+                  value={newTeamName}
+                  onChangeText={setNewTeamName}
+                  style={styles.input}
+                />
+                <Button title="Add Team" onPress={addTeamToTournament} />
+                {tournamentTeams.length > 0 && (
+                  <Button title="Reset Tournament" color="#f44336" onPress={confirmResetTournament} />
+                )}
+  
+                <Text style={styles.subheader}>Teams</Text>
+                {tournamentTeams.map((team, i) => (
+                  <View key={i} style={styles.groupBox}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{team.name}</Text>
+                    <Text>Rating: {team.rating}</Text>
+                    <Text>Wins: {team.wins} | Losses: {team.losses}</Text>
+                    <Text>Members: {team.members.length > 0 ? team.members.join(', ') : 'None'}</Text>
+  
+                    <View style={styles.actionsRow}>
+                      <Button title="+ Win" onPress={() => updateTeamStat(i, 'wins', 1)} />
+                      <Button title="+ Loss" onPress={() => updateTeamStat(i, 'losses', 1)} />
+                    </View>
+  
+                    <View style={styles.actionsRow}>
+                      <Button title="Edit Rating" onPress={() => promptUpdateRating(i)} />
+                      <Button title="Add Member" onPress={() => promptAddMember(i)} />
+                    </View>
+                  </View>
+                ))}
               </>
             )}
           </View>
