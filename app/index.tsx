@@ -197,6 +197,27 @@ export default function App() {
       setNewTeamName('');
     }
   };
+  const generateBracket = (teams: string[]): string[][][] => {
+    const rounds: string[][][] = [];
+    let currentRound = [...teams];
+  
+    while (currentRound.length > 1) {
+      const nextRound: string[][] = [];
+  
+      for (let i = 0; i < currentRound.length; i += 2) {
+        if (i + 1 < currentRound.length) {
+          nextRound.push([currentRound[i], currentRound[i + 1]]);
+        } else {
+          nextRound.push([currentRound[i], 'BYE']);
+        }
+      }
+  
+      rounds.push(nextRound);
+      currentRound = nextRound.map(() => 'TBD'); // Placeholder for next match
+    }
+  
+    return rounds;
+  };  
 
   const updateTeamStat = (index: number, key: 'wins' | 'losses', delta: number) => {
     const updated = [...tournamentTeams];
@@ -547,6 +568,7 @@ export default function App() {
             {activeTab === 'tournaments' && (
               <>
                 <Text style={styles.subheader}>Tournaments</Text>
+
                 <TextInput
                   placeholder="Team Name"
                   placeholderTextColor="#333"
@@ -555,6 +577,15 @@ export default function App() {
                   style={styles.input}
                 />
                 <Button title="Add Team" onPress={addTeamToTournament} />
+                <Button
+  title="Generate Bracket"
+  color="#4A90E2"
+  onPress={() => {
+    const teamNames = tournamentTeams.map(t => t.name);
+    const bracket = generateBracket(teamNames);
+    setBracketRounds(bracket);
+  }}
+/>
                 {tournamentTeams.length > 0 && (
                   <Button title="Reset Tournament" color="#f44336" onPress={confirmResetTournament} />
                 )}
@@ -578,6 +609,36 @@ export default function App() {
                     </View>
                   </View>
                 ))}
+                {bracketRounds.length > 0 && (
+  <View style={{ marginTop: 20 }}>
+    <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 10 }}>Bracket</Text>
+    {bracketRounds.map((round, roundIndex) => (
+      <View key={roundIndex} style={{ marginBottom: 16 }}>
+        <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 6 }}>
+          Round {roundIndex + 1}
+        </Text>
+        {round.map((match, matchIndex) => (
+          <View
+            key={matchIndex}
+            style={{
+              backgroundColor: '#e6e6e6',
+              borderRadius: 6,
+              padding: 10,
+              marginBottom: 4,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Text>{match[0]}</Text>
+            <Text>vs</Text>
+            <Text>{match[1]}</Text>
+          </View>
+        ))}
+      </View>
+    ))}
+  </View>
+)}
+
               </>
             )}
           </View>
