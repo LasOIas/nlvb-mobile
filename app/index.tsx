@@ -287,11 +287,18 @@ export default function App() {
       borderRadius: 6
     },
     groupBox: {
-      marginTop: 15,
-      padding: 10,
-      backgroundColor: '#f2f2f2',
-      borderRadius: 8
-    },
+        marginTop: 15,
+        padding: 14,
+        backgroundColor: '#e8f0fe',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#b0c4de',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+      },
     groupTitle: { fontWeight: 'bold', marginBottom: 5 },
     actionsRow: {
       flexDirection: 'row',
@@ -332,16 +339,39 @@ export default function App() {
       borderColor: '#ccc',
       flexDirection: 'row',
       justifyContent: 'space-around'
-    }
+    },
+    groupMetaRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+    },
+    
+    groupMetaText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#333',
+    },
+    
+    groupPlayers: {
+      borderTopWidth: 1,
+      borderTopColor: '#ccc',
+      paddingTop: 8,
+    },
+    
+    groupPlayerText: {
+      fontSize: 14,
+      marginBottom: 4,
+    }    
   });
 
   return (
     <SafeAreaView style={styles.fullScreen}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+      </ScrollView>
         <Text style={styles.header}>NLVB App</Text>
         <Text style={styles.subheader}>Checked-in: {checkedInPlayers.length}</Text>
 
-        {!isAdmin ? (
+      {!isAdmin ? (
           <View>
             <TextInput
               placeholder="Your name"
@@ -460,41 +490,44 @@ export default function App() {
             
             {activeTab === 'settings' && (
   <>
-    <Text style={styles.subheader}>Group Settings</Text>
-    <TextInput
+    <Text style={styles.subheader}>Generated Groups</Text>
+{groups.map((g, i) => {
+  const groupSkill = g.reduce((acc, p) => acc + p.skill, 0);
+  return (
+    <View key={i} style={styles.groupBox}>
+      <Text style={styles.groupTitle}>Group {i + 1}</Text>
+
+      <View style={styles.groupMetaRow}>
+        <Text style={styles.groupMetaText}>Players: {g.length}</Text>
+        <Text style={styles.groupMetaText}>Total Skill: {groupSkill}</Text>
+      </View>
+
+      <View style={styles.groupPlayers}>
+        {g.map((p, j) => (
+          <Text key={j} style={styles.groupPlayerText}>
+            • {p.name} <Text style={{ color: '#888' }}>(Skill: {p.skill})</Text>
+          </Text>
+        ))}
+      </View>
+    </View>
+  );
+})}
+<TextInput
   placeholder="Number of Groups"
   keyboardType="numeric"
   value={numGroupsText}
-  onChangeText={(v) => {
-    setNumGroupsText(v);
-    const parsed = parseInt(v);
-    if (!isNaN(parsed) && parsed > 0) {
-      setNumGroups(parsed);
-    }
+  onChangeText={(text) => {
+    setNumGroupsText(text);
+    const parsed = parseInt(text);
+    if (!isNaN(parsed)) setNumGroups(parsed);
   }}
   style={styles.input}
 />
+
     <Button title="Generate Groups" onPress={distributeGroups} />
     {groups.length > 0 && (
       <Button title="Regenerate" onPress={distributeGroups} color="#2196F3" />
     )}
-
-    <Text style={styles.subheader}>Generated Groups</Text>
-    {groups.map((g, i) => {
-      const groupSkill = g.reduce((acc, p) => acc + p.skill, 0);
-      return (
-        <View key={i} style={styles.groupBox}>
-          <Text style={styles.groupTitle}>Group {i + 1}</Text>
-          <Text>Players: {g.length}</Text>
-          <Text>Total Skill: {groupSkill}</Text>
-          <View style={{ marginTop: 8 }}>
-            {g.map((p, j) => (
-              <Text key={j}>• {p.name} (Skill: {p.skill})</Text>
-            ))}
-          </View>
-        </View>
-      );
-    })}
   </>
 )}
 
@@ -505,7 +538,6 @@ export default function App() {
                   placeholder="Team Name"
                   value={newTeamName}
                   onChangeText={setNewTeamName}
-                  style={styles.input}
                 />
                 <Button title="Add Team" onPress={addTeamToTournament} />
                 {tournamentTeams.length > 0 && (
@@ -535,14 +567,24 @@ export default function App() {
             )}
           </View>
         )}
-      </ScrollView>
+              <TextInput
+  placeholder="Number of Groups"
+  keyboardType="numeric"
+  value={numGroupsText}
+  onChangeText={(text) => {
+    setNumGroupsText(text);
+    const parsed = parseInt(text);
+    if (!isNaN(parsed)) setNumGroups(parsed);
+  }}
+  style={styles.input}
+/>
 
-      {isAdmin && (
-        <View style={styles.bottomActions}>
-          <Button title="Reset All Check-ins" color="#f44336" onPress={confirmResetCheckIns} />
-          <Button title="Logout" color="#888" onPress={confirmLogoutAdmin} />
-        </View>
-      )}
-    </SafeAreaView>
-  );
+{isAdmin && (
+  <View style={styles.bottomActions}>
+    <Button title="Reset All Check-ins" color="#f44336" onPress={confirmResetCheckIns} />
+    <Button title="Logout" color="#888" onPress={confirmLogoutAdmin} />
+  </View>
+)}
+</SafeAreaView>
+);
 }
