@@ -46,8 +46,8 @@ export default function App() {
 
   const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
-  const [bracketRounds, setBracketRounds] = useState<string[][][]>([]);
-  const [showBracket, setShowBracket] = useState(false);
+const [showBracket, setShowBracket] = useState(false);
+const [rounds, setRounds] = useState<string[][][]>([]); // 3D array: rounds → matchups → teams
 
   
   useEffect(() => {
@@ -167,7 +167,7 @@ export default function App() {
   
   const resetTournament = () => {
     setTournamentTeams([]);
-    setBracketRounds([]);
+    // Removed as setBracketRounds is not defined
     setNewTeamName('');
   };
 
@@ -199,33 +199,53 @@ export default function App() {
       setNewTeamName('');
     }
   };
-  const generateBracket = (teams: string[]): string[][][] => {
-    const rounds: string[][][] = [];
-    let currentRound = [...teams];
-  
-    while (currentRound.length > 1) {
-      const nextRound: string[][] = [];
-  
-      for (let i = 0; i < currentRound.length; i += 2) {
-        if (i + 1 < currentRound.length) {
-          nextRound.push([currentRound[i], currentRound[i + 1]]);
-        } else {
-          nextRound.push([currentRound[i], 'BYE']);
-        }
-      }
-  
-      rounds.push(nextRound);
-      currentRound = nextRound.map(() => 'TBD'); // Placeholder for next match
+  const generateBracket = () => {
+    const shuffled = [...tournamentTeams.map(t => t.name)];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
   
-    return rounds;
-  };  
-
-  const updateTeamStat = (index: number, key: 'wins' | 'losses', delta: number) => {
-    const updated = [...tournamentTeams];
-    updated[index][key] += delta;
-    setTournamentTeams(updated);
+    const firstRound: string[][] = [];
+    for (let i = 0; i < shuffled.length; i += 2) {
+      if (i + 1 < shuffled.length) {
+        firstRound.push([shuffled[i], shuffled[i + 1]]);
+      } else {
+        firstRound.push([shuffled[i], 'BYE']);
+      }
+    }
+  
+    setRounds([firstRound]); // initialize with round 1
+    setShowBracket(true);
   };
+  
+  const handleWinnerSelect = (roundIndex: number, matchIndex: number, winner: string) => {
+    const newRounds = [...rounds];
+  
+    // Save winner to current match
+    newRounds[roundIndex][matchIndex] = [winner, ''];
+  
+    // Check if current round is complete
+    const isRoundComplete = newRounds[roundIndex].every(
+      match => match[0] && (match[1] === '' || match[1] === 'BYE')
+    );
+  
+    // Generate next round if this one is complete and not already created
+    if (isRoundComplete && newRounds.length === roundIndex + 1) {
+      const nextRound: string[][] = [];
+      const winners = newRounds[roundIndex].map(match => match[0]);
+      for (let i = 0; i < winners.length; i += 2) {
+        if (i + 1 < winners.length) {
+          nextRound.push([winners[i], winners[i + 1]]);
+        } else {
+          nextRound.push([winners[i], 'BYE']);
+        }
+      }
+      newRounds.push(nextRound);
+    }
+  
+    setRounds(newRounds);
+  };  
 
   const promptUpdateRating = (index: number) => {
     Alert.prompt(
@@ -290,6 +310,12 @@ export default function App() {
     setGroups(teams);
   };    
 
+  const updateTeamStat = (index: number, stat: 'wins' | 'losses', increment: number) => {
+    const updatedTeams = [...tournamentTeams];
+    updatedTeams[index][stat] += increment;
+    setTournamentTeams(updatedTeams);
+  };
+  
   const styles = StyleSheet.create({
     fullScreen: { flex: 1 },
     container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
@@ -583,9 +609,7 @@ export default function App() {
   title="Generate Bracket"
   color="#4A90E2"
   onPress={() => {
-    const teamNames = tournamentTeams.map(t => t.name);
-    const bracket = generateBracket(teamNames);
-    setBracketRounds(bracket);
+    generateBracket(); // This updates `bracket` state inside the function
   }}
 />
                 {tournamentTeams.length > 0 && (
@@ -596,11 +620,11 @@ export default function App() {
   onPress={() => setShowBracket(!showBracket)}
   color="#8e44ad"
 />
-{bracketRounds.length > 0 && (
+{showBracket && rounds.length > 0 && (
   <View style={{ marginTop: 20 }}>
-    <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 10 }}>Bracket</Text>
-    {bracketRounds.map((round, roundIndex) => (
-      <View key={roundIndex} style={{ marginBottom: 16 }}>
+    <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 10 }}>🏆 Bracket</Text>
+    {rounds.map((round, roundIndex) => (
+      <View key={roundIndex} style={{ marginBottom: 20 }}>
         <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 6 }}>
           Round {roundIndex + 1}
         </Text>
@@ -611,14 +635,29 @@ export default function App() {
               backgroundColor: '#e6e6e6',
               borderRadius: 6,
               padding: 10,
-              marginBottom: 4,
+              marginBottom: 8,
               flexDirection: 'row',
               justifyContent: 'space-between',
             }}
           >
-            <Text>{match[0]}</Text>
-            <Text>vs</Text>
-            <Text>{match[1]}</Text>
+            {match.map((team, teamIndex) => (
+              <TouchableOpacity
+                key={teamIndex}
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  padding: 10,
+                  backgroundColor: '#fff',
+                  marginHorizontal: 5,
+                  borderRadius: 4,
+                  borderWidth: 2,
+                  borderColor: '#888',
+                }}
+                onPress={() => handleWinnerSelect(roundIndex, matchIndex, team)}
+              >
+                <Text style={{ fontWeight: 'bold' }}>{team}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         ))}
       </View>
