@@ -519,7 +519,9 @@ if (savedAdmin) setIsAdmin(JSON.parse(savedAdmin));
                 <Button title="Register Player" onPress={registerPlayerAsAdmin} />
                 {message ? <Text style={styles.message}>{message}</Text> : null}
   
-                <Text style={styles.subheader}>Players</Text>
+                <Text style={styles.subheader}>
+  Players ({players.length})
+</Text>
                 {players.map((p, i) => (
                   <View key={i} style={styles.playerRow}>
                     <TouchableOpacity onPress={() => setExpandedPlayer(expandedPlayer === i ? null : i)}>
