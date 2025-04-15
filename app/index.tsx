@@ -491,46 +491,49 @@ export default function App() {
   
             {/* 🧠 Groups Tab */}
             {activeTab === 'settings' && (
-              <>
-                <Text style={styles.subheader}>Generated Groups</Text>
-                {groups.map((g, i) => {
-                  const groupSkill = g.reduce((acc, p) => acc + p.skill, 0);
-                  return (
-                    <View key={i} style={styles.groupBox}>
-                      <Text style={styles.groupTitle}>Group {i + 1}</Text>
-                      <View style={styles.groupMetaRow}>
-                        <Text style={styles.groupMetaText}>Players: {g.length}</Text>
-                        <Text style={styles.groupMetaText}>Total Skill: {groupSkill}</Text>
-                      </View>
-                      <View style={styles.groupPlayers}>
-                        {g.map((p, j) => (
-                          <Text key={j} style={styles.groupPlayerText}>
-                            • {p.name} <Text style={{ color: '#888' }}>(Skill: {p.skill})</Text>
-                          </Text>
-                        ))}
-                      </View>
-                    </View>
-                  );
-                })}
-  
-                <TextInput
-                  placeholder="Number of Groups"
-                  keyboardType="numeric"
-                  value={numGroupsText}
-                  onChangeText={(text) => {
-                    setNumGroupsText(text);
-                    const parsed = parseInt(text);
-                    if (!isNaN(parsed)) setNumGroups(parsed);
-                  }}
-                  style={styles.input}
-                />
-  
-                <Button title="Generate Groups" onPress={distributeGroups} />
-                {groups.length > 0 && (
-                  <Button title="Regenerate" onPress={distributeGroups} color="#2196F3" />
-                )}
-              </>
-            )}
+  <>
+    <Text style={styles.subheader}>Generated Groups</Text>
+
+    <TextInput
+      placeholder="Number of Groups"
+      keyboardType="numeric"
+      value={numGroupsText}
+      onChangeText={(text) => {
+        setNumGroupsText(text);
+        const parsed = parseInt(text);
+        if (!isNaN(parsed)) setNumGroups(parsed);
+      }}
+      style={styles.input}
+    />
+
+    {groups.map((g, i) => {
+      const groupSkill = g.reduce((acc, p) => acc + p.skill, 0);
+      return (
+        <View key={i} style={styles.groupBox}>
+          <Text style={styles.groupTitle}>Group {i + 1}</Text>
+
+          <View style={styles.groupMetaRow}>
+            <Text style={styles.groupMetaText}>Players: {g.length}</Text>
+            <Text style={styles.groupMetaText}>Total Skill: {groupSkill}</Text>
+          </View>
+
+          <View style={styles.groupPlayers}>
+            {g.map((p, j) => (
+              <Text key={j} style={styles.groupPlayerText}>
+                • {p.name} <Text style={{ color: '#888' }}>(Skill: {p.skill})</Text>
+              </Text>
+            ))}
+          </View>
+        </View>
+      );
+    })}
+
+    <Button title="Generate Groups" onPress={distributeGroups} />
+    {groups.length > 0 && (
+      <Button title="Regenerate" onPress={distributeGroups} color="#2196F3" />
+    )}
+  </>
+)}
   
             {/* 🏆 Tournaments Tab */}
             {activeTab === 'tournaments' && (
