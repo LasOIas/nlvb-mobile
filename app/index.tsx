@@ -48,19 +48,32 @@ export default function App() {
   const [newTeamName, setNewTeamName] = useState('');
 const [showBracket, setShowBracket] = useState(false);
 const [rounds, setRounds] = useState<string[][][]>([]); // 3D array: rounds → matchups → teams
-
+const STORAGE_KEYS = {
+  players: 'players',
+  checkedInPlayers: 'checkedInPlayers',
+  tournamentTeams: 'tournamentTeams',
+  groups: 'groups',
+  rounds: 'rounds',
+  activeTab: 'activeTab',
+};
   
-  useEffect(() => {
-    const loadData = async () => {
-      const savedPlayers = await AsyncStorage.getItem('players');
-      const savedCheckins = await AsyncStorage.getItem('checkedInPlayers');
-      const parsedPlayers = savedPlayers ? JSON.parse(savedPlayers) : [];
-      const parsedCheckins = savedCheckins ? JSON.parse(savedCheckins) : [];
-      setPlayers(parsedPlayers);
-      setCheckedInPlayers(parsedCheckins);
-    };
-    loadData();
-  }, []);
+const loadData = async () => {
+  const savedPlayers = await AsyncStorage.getItem(STORAGE_KEYS.players);
+  const savedCheckins = await AsyncStorage.getItem(STORAGE_KEYS.checkedInPlayers);
+  const savedTeams = await AsyncStorage.getItem(STORAGE_KEYS.tournamentTeams);
+  const savedGroups = await AsyncStorage.getItem(STORAGE_KEYS.groups);
+  const savedRounds = await AsyncStorage.getItem(STORAGE_KEYS.rounds);
+  const savedTab = await AsyncStorage.getItem(STORAGE_KEYS.activeTab);
+  const savedAdmin = await AsyncStorage.getItem('isAdmin');
+if (savedAdmin) setIsAdmin(JSON.parse(savedAdmin));
+
+  setPlayers(savedPlayers ? JSON.parse(savedPlayers) : []);
+  setCheckedInPlayers(savedCheckins ? JSON.parse(savedCheckins) : []);
+  setTournamentTeams(savedTeams ? JSON.parse(savedTeams) : []);
+  setGroups(savedGroups ? JSON.parse(savedGroups) : []);
+  setRounds(savedRounds ? JSON.parse(savedRounds) : []);
+  if (savedTab) setActiveTab(savedTab as any);
+};
 
   useEffect(() => {
     AsyncStorage.setItem('players', JSON.stringify(players));
@@ -69,6 +82,26 @@ const [rounds, setRounds] = useState<string[][][]>([]); // 3D array: rounds → 
   useEffect(() => {
     AsyncStorage.setItem('checkedInPlayers', JSON.stringify(checkedInPlayers));
   }, [checkedInPlayers]);
+
+  useEffect(() => {
+    AsyncStorage.setItem(STORAGE_KEYS.tournamentTeams, JSON.stringify(tournamentTeams));
+  }, [tournamentTeams]);
+  
+  useEffect(() => {
+    AsyncStorage.setItem(STORAGE_KEYS.groups, JSON.stringify(groups));
+  }, [groups]);
+  
+  useEffect(() => {
+    AsyncStorage.setItem(STORAGE_KEYS.rounds, JSON.stringify(rounds));
+  }, [rounds]);
+  
+  useEffect(() => {
+    AsyncStorage.setItem(STORAGE_KEYS.activeTab, activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    AsyncStorage.setItem('isAdmin', JSON.stringify(isAdmin));
+  }, [isAdmin]);
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
