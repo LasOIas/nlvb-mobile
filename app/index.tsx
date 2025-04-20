@@ -12,9 +12,10 @@ import {
   SafeAreaView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, addDoc, getDocs, doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from '../services/firebase';
 import { onSnapshot } from "firebase/firestore";
+import { enableIndexedDbPersistence } from "firebase/firestore";
 
 interface Player {
   name: string;
@@ -83,6 +84,12 @@ const loadData = async () => {
 
 useEffect(() => {
   loadData();
+}, []);
+
+useEffect(() => {
+  enableIndexedDbPersistence(db).catch((err) => {
+    console.warn("Persistence failed:", err);
+  });
 }, []);
 
 const loadFirebaseTournamentTeams = async () => {
@@ -174,19 +181,23 @@ const checkInPlayer = async () => {
 
 const registerPlayerAsAdmin = async () => {
   const trimmedName = name.trim();
-  const parsedSkill = parseInt(skill);
+  const parsedSkill = parseFloat(skill);
 
   if (!trimmedName || isNaN(parsedSkill)) {
     setMessage('Enter valid name and skill');
     return;
   }
 
-  const exists = players.some(p => normalize(p.name) === normalize(trimmedName));
-  if (!exists) {
-    const newPlayer = { name: trimmedName, skill: parsedSkill };
-    const updated = [...players, newPlayer];
-    setPlayers(updated);
-    await setDoc(doc(db, 'players', trimmedName), newPlayer);
+const newPlayer = { name: trimmedName, skill: parsedSkill };
+await setDoc(doc(db, 'players', trimmedName), newPlayer);
+console.log('Saved player to Firestore:', newPlayer);
+
+const exists = players.some(p => normalize(p.name) === normalize(trimmedName));
+if (!exists) {
+  // Save to Firebase
+  await setDoc(doc(db, 'players', trimmedName), newPlayer); // ✅ write to Firestore
+
+    // setPlayers happens automatically from onSnapshot
     setMessage('Player registered');
   } else {
     setMessage('Player already exists');
@@ -226,9 +237,13 @@ const updatePlayer = async (index: number) => {
     setIsAdmin(false);
   };
 
-  const resetCheckIns = () => {
-    setCheckedInPlayers([]);
-  };
+const resetCheckIns = async () => {
+  for (const name of checkedInPlayers) {
+    await deleteDoc(doc(db, 'checkedInPlayers', name));
+  }
+  setCheckedInPlayers([]);
+};
+
 
   const confirmResetCheckIns = () => {
     Alert.alert(
@@ -609,19 +624,29 @@ const generateBracket = () => {
                           setEditedName(p.name);
                           setEditedSkill(p.skill.toString());
                         }} />
-                        <Button title="Delete" color="#f44336" onPress={() => {
-                          Alert.alert(
-                            'Confirm Delete',
-                            `Are you sure you want to delete ${p.name}?`,
-                            [
-                              { text: 'Cancel', style: 'cancel' },
-                              { text: 'Delete', style: 'destructive', onPress: () => {
-                                const updated = players.filter((_, idx) => idx !== i);
-                                setPlayers(updated);
-                              }}
-                            ]
-                          );
-                        }} />
+                       <Button
+  title="Delete"
+  color="#f44336"
+  onPress={() => {
+    Alert.alert(
+      'Confirm Delete',
+      `Are you sure you want to delete ${p.name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const updated = players.filter((_, idx) => idx !== i);
+            setPlayers(updated);
+            await deleteDoc(doc(db, 'players', p.name)); // 💥 This deletes from Firebase too!
+          },
+        },
+      ]
+    );
+  }}
+/>
+
                       </View>
                     )}
   
