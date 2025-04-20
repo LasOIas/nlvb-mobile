@@ -12,6 +12,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { collection, addDoc, getDocs, doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from '../services/firebase';
 
 interface Player {
   name: string;
@@ -56,23 +58,26 @@ const STORAGE_KEYS = {
   rounds: 'rounds',
   activeTab: 'activeTab',
 };
-  
-const loadData = async () => {
-  const savedPlayers = await AsyncStorage.getItem(STORAGE_KEYS.players);
-  const savedCheckins = await AsyncStorage.getItem(STORAGE_KEYS.checkedInPlayers);
-  const savedTeams = await AsyncStorage.getItem(STORAGE_KEYS.tournamentTeams);
-  const savedGroups = await AsyncStorage.getItem(STORAGE_KEYS.groups);
-  const savedRounds = await AsyncStorage.getItem(STORAGE_KEYS.rounds);
-  const savedTab = await AsyncStorage.getItem(STORAGE_KEYS.activeTab);
-  const savedAdmin = await AsyncStorage.getItem('isAdmin');
 
-  if (savedAdmin) setIsAdmin(JSON.parse(savedAdmin));
-  setPlayers(savedPlayers ? JSON.parse(savedPlayers) : []);
-  setCheckedInPlayers(savedCheckins ? JSON.parse(savedCheckins) : []);
-  setTournamentTeams(savedTeams ? JSON.parse(savedTeams) : []);
-  setGroups(savedGroups ? JSON.parse(savedGroups) : []);
-  setRounds(savedRounds ? JSON.parse(savedRounds) : []);
-  if (savedTab) setActiveTab(savedTab as any);
+const loadData = async () => {
+  const playerSnap = await getDocs(collection(db, 'players'));
+  const checkinsSnap = await getDocs(collection(db, 'checkedInPlayers'));
+  const teamSnap = await getDocs(collection(db, 'tournamentTeams'));
+  const groupSnap = await getDocs(collection(db, 'groups'));
+  const roundsSnap = await getDocs(collection(db, 'rounds'));
+
+  const metaDoc = await getDoc(doc(db, 'meta', 'global'));
+
+  setPlayers(playerSnap.docs.map(d => d.data() as Player));
+  setCheckedInPlayers(checkinsSnap.docs.map(d => d.id));
+  setTournamentTeams(teamSnap.docs.map(d => d.data() as TournamentTeam));
+  setGroups(groupSnap.docs.map(d => d.data().group as Player[]));
+  setRounds(roundsSnap.docs.map(d => d.data().round as string[][]));
+  if (metaDoc.exists()) {
+    const meta = metaDoc.data();
+    if (meta.activeTab) setActiveTab(meta.activeTab);
+    if (meta.isAdmin !== undefined) setIsAdmin(meta.isAdmin);
+  }
 };
 
 useEffect(() => {
@@ -80,70 +85,86 @@ useEffect(() => {
 }, []);
 
 useEffect(() => {
-    AsyncStorage.setItem('players', JSON.stringify(players));
-  }, [players]);
+  players.forEach(p =>
+    setDoc(doc(db, 'players', p.name), p)
+  );
+}, [players]);
 
-  useEffect(() => {
-    AsyncStorage.setItem('checkedInPlayers', JSON.stringify(checkedInPlayers));
-  }, [checkedInPlayers]);
+useEffect(() => {
+  checkedInPlayers.forEach(name =>
+    setDoc(doc(db, 'checkedInPlayers', name), { name })
+  );
+}, [checkedInPlayers]);
 
-  useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEYS.tournamentTeams, JSON.stringify(tournamentTeams));
-  }, [tournamentTeams]);
-  
-  useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEYS.groups, JSON.stringify(groups));
-  }, [groups]);
-  
-  useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEYS.rounds, JSON.stringify(rounds));
-  }, [rounds]);
-  
-  useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEYS.activeTab, activeTab);
-  }, [activeTab]);
+useEffect(() => {
+  tournamentTeams.forEach(team =>
+    setDoc(doc(db, 'tournamentTeams', team.name), team)
+  );
+}, [tournamentTeams]);
 
-  useEffect(() => {
-    AsyncStorage.setItem('isAdmin', JSON.stringify(isAdmin));
-  }, [isAdmin]);
+useEffect(() => {
+  groups.forEach((group, i) =>
+    setDoc(doc(db, 'groups', `group-${i}`), { group })
+  );
+}, [groups]);
+
+useEffect(() => {
+  rounds.forEach((round, i) =>
+    setDoc(doc(db, 'rounds', `round-${i}`), { round })
+  );
+}, [rounds]);
+
+useEffect(() => {
+  setDoc(doc(db, 'meta', 'global'), { activeTab });
+}, [activeTab]);
+
+useEffect(() => {
+  setDoc(doc(db, 'meta', 'global'), { isAdmin });
+}, [isAdmin]);
+
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
-  const checkInPlayer = () => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    const match = players.find(p => normalize(p.name) === normalize(trimmed));
-    if (match && !checkedInPlayers.includes(match.name)) {
-      setCheckedInPlayers([...checkedInPlayers, match.name]);
-      setMessage('Checked in');
-    } else {
-      setMessage('Player not found');
-    }
-    setName('');
-    setTimeout(() => setMessage(''), 2000);
-  };
+const checkInPlayer = async () => {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const match = players.find(p => normalize(p.name) === normalize(trimmed));
+  if (match && !checkedInPlayers.includes(match.name)) {
+    const updated = [...checkedInPlayers, match.name];
+    setCheckedInPlayers(updated);
+    await setDoc(doc(db, 'checkedInPlayers', match.name), { name: match.name });
+    setMessage('Checked in');
+  } else {
+    setMessage('Player not found');
+  }
+  setName('');
+  setTimeout(() => setMessage(''), 2000);
+};
 
-  const registerPlayerAsAdmin = () => {
-    const trimmedName = name.trim();
-    const parsedSkill = parseInt(skill);
+const registerPlayerAsAdmin = async () => {
+  const trimmedName = name.trim();
+  const parsedSkill = parseInt(skill);
 
-    if (!trimmedName || isNaN(parsedSkill)) {
-      setMessage('Enter valid name and skill');
-      return;
-    }
+  if (!trimmedName || isNaN(parsedSkill)) {
+    setMessage('Enter valid name and skill');
+    return;
+  }
 
-    const exists = players.some(p => normalize(p.name) === normalize(trimmedName));
-    if (!exists) {
-      setPlayers([...players, { name: trimmedName, skill: parsedSkill }]);
-      setMessage('Player registered');
-    } else {
-      setMessage('Player already exists');
-    }
+  const exists = players.some(p => normalize(p.name) === normalize(trimmedName));
+  if (!exists) {
+    const newPlayer = { name: trimmedName, skill: parsedSkill };
+    const updated = [...players, newPlayer];
+    setPlayers(updated);
+    await setDoc(doc(db, 'players', trimmedName), newPlayer);
+    setMessage('Player registered');
+  } else {
+    setMessage('Player already exists');
+  }
 
-    setName('');
-    setSkill('');
-    setTimeout(() => setMessage(''), 2000);
-  };
+  setName('');
+  setSkill('');
+  setTimeout(() => setMessage(''), 2000);
+};
 
   const updatePlayer = (index: number) => {
     const nameInput = editedName.trim();
@@ -220,23 +241,29 @@ useEffect(() => {
   };
 
   const addTeamToTournament = async () => {
-  const trimmed = newTeamName.trim();
-  if (
-    trimmed &&
-    !tournamentTeams.some(team => team.name.toLowerCase() === trimmed.toLowerCase())
-  ) {
-    const newTeam: TournamentTeam = {
+    const trimmed = newTeamName.trim();
+    if (!trimmed) return;
+  
+    // check for duplicates
+    const snapshot = await getDocs(collection(db, "tournamentTeams"));
+    const names = snapshot.docs.map(doc => doc.data().name.toLowerCase());
+    if (names.includes(trimmed.toLowerCase())) return;
+  
+    await addDoc(collection(db, "tournamentTeams"), {
       name: trimmed,
       members: [],
       rating: 0,
       wins: 0,
       losses: 0
-    };
-    const updated = [...tournamentTeams, newTeam];
-    setTournamentTeams(updated);
-    await AsyncStorage.setItem(STORAGE_KEYS.tournamentTeams, JSON.stringify(updated)); // 🧠 force save
+    });
+  
+    await loadTeamsFromFirebase(); // 👇 you'll define this next
     setNewTeamName('');
-  }
+  };
+const loadTeamsFromFirebase = async () => {
+  const snapshot = await getDocs(collection(db, "tournamentTeams"));
+  const teams = snapshot.docs.map(doc => doc.data() as TournamentTeam);
+  setTournamentTeams(teams);
 };
 
 const generateBracket = () => {
@@ -320,7 +347,8 @@ const generateBracket = () => {
         }
       }
     );
-  };;
+  };
+;
 
   const checkInFromAdmin = (name: string) => {
     if (!checkedInPlayers.includes(name)) {
