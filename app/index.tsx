@@ -14,6 +14,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, addDoc, getDocs, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from '../services/firebase';
+import { onSnapshot } from "firebase/firestore";
 
 interface Player {
   name: string;
@@ -84,44 +85,74 @@ useEffect(() => {
   loadData();
 }, []);
 
-useEffect(() => {
-  players.forEach(p =>
-    setDoc(doc(db, 'players', p.name), p)
-  );
-}, [players]);
+const loadFirebaseTournamentTeams = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "tournamentTeams"));
+    const teams: TournamentTeam[] = [];
+    querySnapshot.forEach((doc) => {
+      teams.push(doc.data() as TournamentTeam);
+    });
+    setTournamentTeams(teams);
+  } catch (error) {
+    console.error("Error loading teams from Firestore:", error);
+  }
+};
 
 useEffect(() => {
-  checkedInPlayers.forEach(name =>
-    setDoc(doc(db, 'checkedInPlayers', name), { name })
-  );
-}, [checkedInPlayers]);
+  loadFirebaseTournamentTeams();
+}, []);
 
+// Sync players
 useEffect(() => {
-  tournamentTeams.forEach(team =>
-    setDoc(doc(db, 'tournamentTeams', team.name), team)
-  );
-}, [tournamentTeams]);
+  const unsubscribe = onSnapshot(collection(db, 'players'), (snapshot) => {
+    setPlayers(snapshot.docs.map(doc => doc.data() as Player));
+  });
+  return () => unsubscribe();
+}, []);
 
+// Sync checkedInPlayers
 useEffect(() => {
-  groups.forEach((group, i) =>
-    setDoc(doc(db, 'groups', `group-${i}`), { group })
-  );
-}, [groups]);
+  const unsubscribe = onSnapshot(collection(db, 'checkedInPlayers'), (snapshot) => {
+    setCheckedInPlayers(snapshot.docs.map(doc => doc.id));
+  });
+  return () => unsubscribe();
+}, []);
 
+// Sync tournamentTeams
 useEffect(() => {
-  rounds.forEach((round, i) =>
-    setDoc(doc(db, 'rounds', `round-${i}`), { round })
-  );
-}, [rounds]);
+  const unsubscribe = onSnapshot(collection(db, 'tournamentTeams'), (snapshot) => {
+    setTournamentTeams(snapshot.docs.map(doc => doc.data() as TournamentTeam));
+  });
+  return () => unsubscribe();
+}, []);
 
+// Sync groups
 useEffect(() => {
-  setDoc(doc(db, 'meta', 'global'), { activeTab });
-}, [activeTab]);
+  const unsubscribe = onSnapshot(collection(db, 'groups'), (snapshot) => {
+    setGroups(snapshot.docs.map(doc => doc.data().group as Player[]));
+  });
+  return () => unsubscribe();
+}, []);
 
+// Sync rounds
 useEffect(() => {
-  setDoc(doc(db, 'meta', 'global'), { isAdmin });
-}, [isAdmin]);
+  const unsubscribe = onSnapshot(collection(db, 'rounds'), (snapshot) => {
+    setRounds(snapshot.docs.map(doc => doc.data().round as string[][]));
+  });
+  return () => unsubscribe();
+}, []);
 
+// Sync meta (admin & tab)
+useEffect(() => {
+  const unsubscribe = onSnapshot(doc(db, 'meta', 'global'), (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      if (data.activeTab) setActiveTab(data.activeTab);
+      if (data.isAdmin !== undefined) setIsAdmin(data.isAdmin);
+    }
+  });
+  return () => unsubscribe();
+}, []);
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
@@ -166,23 +197,21 @@ const registerPlayerAsAdmin = async () => {
   setTimeout(() => setMessage(''), 2000);
 };
 
-  const updatePlayer = (index: number) => {
-    const nameInput = editedName.trim();
-    const skillInput = parseFloat(editedSkill);
-    const updated = [...players];
+const updatePlayer = async (index: number) => {
+  const nameInput = editedName.trim();
+  const skillInput = parseFloat(editedSkill);
+  const updated = [...players];
 
-    if (nameInput) {
-      updated[index].name = nameInput;
-    }
-    if (!isNaN(skillInput)) {
-      updated[index].skill = skillInput;
-    }
+  if (nameInput) updated[index].name = nameInput;
+  if (!isNaN(skillInput)) updated[index].skill = skillInput;
 
-    setPlayers(updated);
-    setEditModeIndex(null);
-    setEditedName('');
-    setEditedSkill('');
-  };
+  setPlayers(updated);
+  setEditModeIndex(null);
+  setEditedName('');
+  setEditedSkill('');
+
+  await setDoc(doc(db, 'players', updated[index].name), updated[index]);
+};
 
   const loginAdmin = () => {
     if (adminCode === 'nlvb2025') {
@@ -242,24 +271,29 @@ const registerPlayerAsAdmin = async () => {
 
   const addTeamToTournament = async () => {
     const trimmed = newTeamName.trim();
-    if (!trimmed) return;
+    if (
+      trimmed &&
+      !tournamentTeams.some(team => team.name.toLowerCase() === trimmed.toLowerCase())
+    ) {
+      const newTeam: TournamentTeam = {
+        name: trimmed,
+        members: [],
+        rating: 0,
+        wins: 0,
+        losses: 0
+      };
+      const updated = [...tournamentTeams, newTeam];
+      setTournamentTeams(updated);
+      setNewTeamName('');
   
-    // check for duplicates
-    const snapshot = await getDocs(collection(db, "tournamentTeams"));
-    const names = snapshot.docs.map(doc => doc.data().name.toLowerCase());
-    if (names.includes(trimmed.toLowerCase())) return;
-  
-    await addDoc(collection(db, "tournamentTeams"), {
-      name: trimmed,
-      members: [],
-      rating: 0,
-      wins: 0,
-      losses: 0
-    });
-  
-    await loadTeamsFromFirebase(); // 👇 you'll define this next
-    setNewTeamName('');
+      try {
+        await setDoc(doc(db, "tournamentTeams", trimmed), newTeam);
+      } catch (err) {
+        console.error("Failed to save team to Firestore:", err);
+      }
+    }
   };
+
 const loadTeamsFromFirebase = async () => {
   const snapshot = await getDocs(collection(db, "tournamentTeams"));
   const teams = snapshot.docs.map(doc => doc.data() as TournamentTeam);
