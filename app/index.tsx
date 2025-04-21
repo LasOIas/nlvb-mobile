@@ -63,22 +63,36 @@ const STORAGE_KEYS = {
 const loadData = async () => {
   try {
     const playerSnap = await getDocs(collection(db, 'players'));
+    const playersData = playerSnap.docs.map(d => d.data() as Player);
+    setPlayers(playersData);
+    await AsyncStorage.setItem(STORAGE_KEYS.players, JSON.stringify(playersData));
+
     const checkinsSnap = await getDocs(collection(db, 'checkedInPlayers'));
+    const checkinsData = checkinsSnap.docs.map(d => d.id);
+    setCheckedInPlayers(checkinsData);
+    await AsyncStorage.setItem(STORAGE_KEYS.checkedInPlayers, JSON.stringify(checkinsData));
+
     const teamSnap = await getDocs(collection(db, 'tournamentTeams'));
+    const teamData = teamSnap.docs.map(d => d.data() as TournamentTeam);
+    setTournamentTeams(teamData);
+    await AsyncStorage.setItem(STORAGE_KEYS.tournamentTeams, JSON.stringify(teamData));
+
     const groupSnap = await getDocs(collection(db, 'groups'));
+    const groupData = groupSnap.docs.flatMap(d => d.data().group as Player[][]);
+    setGroups(groupData);
+    await AsyncStorage.setItem(STORAGE_KEYS.groups, JSON.stringify(groupData));
+
     const roundsSnap = await getDocs(collection(db, 'rounds'));
+    const roundData = roundsSnap.docs.map(d => d.data().round as string[][]);
+    setRounds(roundData);
+    await AsyncStorage.setItem(STORAGE_KEYS.rounds, JSON.stringify(roundData));
+
     const metaDoc = await getDoc(doc(db, 'meta', 'global'));
-
-    setPlayers(playerSnap.docs.map(d => d.data() as Player));
-    setCheckedInPlayers(checkinsSnap.docs.map(d => d.id));
-    setTournamentTeams(teamSnap.docs.map(d => d.data() as TournamentTeam));
-    setGroups(groupSnap.docs.map(d => d.data().group as Player[]));
-    setRounds(roundsSnap.docs.map(d => d.data().round as string[][]));
-
     if (metaDoc.exists()) {
       const meta = metaDoc.data();
       if (meta.activeTab) setActiveTab(meta.activeTab);
       if (meta.isAdmin !== undefined) setIsAdmin(meta.isAdmin);
+      await AsyncStorage.setItem(STORAGE_KEYS.activeTab, meta.activeTab);
     }
   } catch (error) {
     console.error("Error loading data:", error);
@@ -86,7 +100,35 @@ const loadData = async () => {
 };
 
 useEffect(() => {
-  loadData();
+}, []);
+
+useEffect(() => {
+  const restoreFromStorage = async () => {
+    try {
+      const playersRaw = await AsyncStorage.getItem(STORAGE_KEYS.players);
+      const checkinsRaw = await AsyncStorage.getItem(STORAGE_KEYS.checkedInPlayers);
+      const teamsRaw = await AsyncStorage.getItem(STORAGE_KEYS.tournamentTeams);
+      const groupsRaw = await AsyncStorage.getItem(STORAGE_KEYS.groups);
+      const roundsRaw = await AsyncStorage.getItem(STORAGE_KEYS.rounds);
+      const activeTabRaw = await AsyncStorage.getItem(STORAGE_KEYS.activeTab);
+
+      if (playersRaw) setPlayers(JSON.parse(playersRaw));
+      if (checkinsRaw) setCheckedInPlayers(JSON.parse(checkinsRaw));
+      if (teamsRaw) setTournamentTeams(JSON.parse(teamsRaw));
+      if (groupsRaw) setGroups(JSON.parse(groupsRaw));
+      if (roundsRaw) setRounds(JSON.parse(roundsRaw));
+      if (activeTabRaw) setActiveTab(activeTabRaw as any);
+
+      // ONLY fetch from Firestore if no AsyncStorage values were found
+      if (!playersRaw || !checkinsRaw || !teamsRaw || !groupsRaw || !roundsRaw) {
+        await loadData();
+      }
+    } catch (err) {
+      console.error("Failed to restore local state:", err);
+    }
+  };
+
+  restoreFromStorage();
 }, []);
 
 const loadFirebaseTournamentTeams = async () => {
