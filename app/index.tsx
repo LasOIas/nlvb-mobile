@@ -1,27 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  TouchableOpacity,
-  Pressable,
-  SafeAreaView,
+    View,
+    Text,
+    TextInput,
+    Button,
+    StyleSheet,
+    Alert,
+    ScrollView,
+    TouchableOpacity,
+    Pressable,
+    SafeAreaView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  collection,
-  getDocs,
-  getDoc,
-  setDoc,
-  deleteDoc,
-  doc,
-} from 'firebase/firestore'; // imported from firebase/firestore
-import { db } from '../services/firebase';
-import { initializeApp } from 'firebase/app';
 
 interface Player {
   name: string;
@@ -56,177 +46,120 @@ export default function App() {
 
   const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
-const [showBracket, setShowBracket] = useState(false);
-const [rounds, setRounds] = useState<string[][][]>([]); // 3D array: rounds → matchups → teams
-const STORAGE_KEYS = {
-  players: 'players',
-  checkedInPlayers: 'checkedInPlayers',
-  tournamentTeams: 'tournamentTeams',
-  groups: 'groups',
-  rounds: 'rounds',
-  activeTab: 'activeTab',
-};
+  const [showBracket, setShowBracket] = useState(false);
+  const [rounds, setRounds] = useState<string[][][]>([]); // 3D array: rounds → matchups → teams
 
-const loadData = async () => {
-  try {
-    const playerSnap = await getDocs(collection(db, 'players'));
-    const playersData = playerSnap.docs.map(d => d.data() as Player);
-    setPlayers(playersData);
-    await AsyncStorage.setItem(STORAGE_KEYS.players, JSON.stringify(playersData));
+  const STORAGE_KEYS = {
+    players: 'players',
+    checkedInPlayers: 'checkedInPlayers',
+    tournamentTeams: 'tournamentTeams',
+    groups: 'groups',
+    rounds: 'rounds',
+    activeTab: 'activeTab',
+  };
 
-    const checkinsSnap = await getDocs(collection(db, 'checkedInPlayers'));
-    const checkinsData = checkinsSnap.docs.map(d => d.id);
-    setCheckedInPlayers(checkinsData);
-    await AsyncStorage.setItem(STORAGE_KEYS.checkedInPlayers, JSON.stringify(checkinsData));
-
-    const teamSnap = await getDocs(collection(db, 'tournamentTeams'));
-    const teamData = teamSnap.docs.map(d => d.data() as TournamentTeam);
-    setTournamentTeams(teamData);
-    await AsyncStorage.setItem(STORAGE_KEYS.tournamentTeams, JSON.stringify(teamData));
-
-    const groupSnap = await getDocs(collection(db, 'groups'));
-    const groupData = groupSnap.docs.flatMap(d => d.data().group as Player[][]);
-    setGroups(groupData);
-    await AsyncStorage.setItem(STORAGE_KEYS.groups, JSON.stringify(groupData));
-
-    const roundsSnap = await getDocs(collection(db, 'rounds'));
-    const roundData = roundsSnap.docs.map(d => d.data().round as string[][]);
-    setRounds(roundData);
-    await AsyncStorage.setItem(STORAGE_KEYS.rounds, JSON.stringify(roundData));
-
-    const metaDoc = await getDoc(doc(db, 'meta', 'global'));
-    if (metaDoc.exists()) {
-      const meta = metaDoc.data();
-      if (meta.activeTab) setActiveTab(meta.activeTab);
-      if (meta.isAdmin !== undefined) setIsAdmin(meta.isAdmin);
-      await AsyncStorage.setItem(STORAGE_KEYS.activeTab, meta.activeTab);
-    }
-  } catch (error) {
-    console.error("Error loading data:", error);
-  }
-};
-
-useEffect(() => {
-}, []);
-
-useEffect(() => {
-  const restoreFromStorage = async () => {
+  const loadData = async () => {
     try {
-      const playersRaw = await AsyncStorage.getItem('players');
-      if (playersRaw) {
-        setPlayers(JSON.parse(playersRaw));
-      } else {
-        await loadData();
-      }
-    } catch (err) {
-      console.error("Failed to restore local state:", err);
+      // Fallback logic to load data if AsyncStorage is empty.
+    } catch (error) {
+      console.error("Error loading data:", error);
     }
   };
 
-  restoreFromStorage();
-}, []);
-
-useEffect(() => {
-  const restoreFromStorage = async () => {
-    try {
-      const playersRaw = await AsyncStorage.getItem(STORAGE_KEYS.players);
-      const checkinsRaw = await AsyncStorage.getItem(STORAGE_KEYS.checkedInPlayers);
-      const teamsRaw = await AsyncStorage.getItem(STORAGE_KEYS.tournamentTeams);
-      const groupsRaw = await AsyncStorage.getItem(STORAGE_KEYS.groups);
-      const roundsRaw = await AsyncStorage.getItem(STORAGE_KEYS.rounds);
-      const activeTabRaw = await AsyncStorage.getItem(STORAGE_KEYS.activeTab);
-
-      if (playersRaw) setPlayers(JSON.parse(playersRaw));
-      if (checkinsRaw) setCheckedInPlayers(JSON.parse(checkinsRaw));
-      if (teamsRaw) setTournamentTeams(JSON.parse(teamsRaw));
-      if (groupsRaw) setGroups(JSON.parse(groupsRaw));
-      if (roundsRaw) setRounds(JSON.parse(roundsRaw));
-      if (activeTabRaw) setActiveTab(activeTabRaw as any);
-
-      // ONLY fetch from Firestore if no AsyncStorage values were found
-      if (!playersRaw || !checkinsRaw || !teamsRaw || !groupsRaw || !roundsRaw) {
-        await loadData();
+  // Consolidated restoration of all storage data
+  useEffect(() => {
+    const restoreAllData = async () => {
+      try {
+        const [
+          playersRaw,
+          checkinsRaw,
+          teamsRaw,
+          groupsRaw,
+          roundsRaw,
+          activeTabRaw,
+        ] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEYS.players),
+          AsyncStorage.getItem(STORAGE_KEYS.checkedInPlayers),
+          AsyncStorage.getItem(STORAGE_KEYS.tournamentTeams),
+          AsyncStorage.getItem(STORAGE_KEYS.groups),
+          AsyncStorage.getItem(STORAGE_KEYS.rounds),
+          AsyncStorage.getItem(STORAGE_KEYS.activeTab),
+        ]);
+  
+        if (playersRaw) setPlayers(JSON.parse(playersRaw));
+        if (checkinsRaw) setCheckedInPlayers(JSON.parse(checkinsRaw));
+        if (teamsRaw) setTournamentTeams(JSON.parse(teamsRaw));
+        if (groupsRaw) setGroups(JSON.parse(groupsRaw));
+        if (roundsRaw) setRounds(JSON.parse(roundsRaw));
+        if (activeTabRaw) setActiveTab(activeTabRaw as any);
+  
+        // Fallback load if one of the key values is missing
+        if (!playersRaw || !checkinsRaw || !teamsRaw || !groupsRaw || !roundsRaw) {
+          await loadData();
+        }
+      } catch (err) {
+        console.error("Failed to restore local state:", err);
       }
-    } catch (err) {
-      console.error("Failed to restore local state:", err);
-    }
-  };
-
-  restoreFromStorage();
-}, []);
-
-const loadFirebaseTournamentTeams = async () => {
-  try {
-    const querySnapshot = await getDocs(collection(db, "tournamentTeams"));
-    const teams: TournamentTeam[] = [];
-    querySnapshot.forEach((doc) => {
-      teams.push(doc.data() as TournamentTeam);
-    });
-    setTournamentTeams(teams);
-  } catch (error) {
-    console.error("Error loading teams from Firestore:", error);
-  }
-};
+    };
+  
+    restoreAllData();
+  }, []);
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
-const checkInPlayer = async () => {
-  const trimmed = name.trim();
-  if (!trimmed) return;
-  const match = players.find(p => normalize(p.name) === normalize(trimmed));
-  if (match && !checkedInPlayers.includes(match.name)) {
-    const updated = [...checkedInPlayers, match.name];
-    setCheckedInPlayers(updated);
-    await setDoc(doc(db, 'checkedInPlayers', match.name), { name: match.name });
-    setMessage('Checked in');
-  } else {
-    setMessage('Player not found');
-  }
-  setName('');
-  setTimeout(() => setMessage(''), 2000);
-};
+  const checkInPlayer = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const match = players.find(p => normalize(p.name) === normalize(trimmed));
+    if (match && !checkedInPlayers.includes(match.name)) {
+      const updated = [...checkedInPlayers, match.name];
+      setCheckedInPlayers(updated);
+      setMessage('Checked in');
+    } else {
+      setMessage('Player not found');
+    }
+    setName('');
+    setTimeout(() => setMessage(''), 2000);
+  };
 
-const registerPlayerAsAdmin = async () => {
-  const trimmedName = name.trim();
-  const parsedSkill = parseFloat(skill);
+  const registerPlayerAsAdmin = async () => {
+    const trimmedName = name.trim();
+    const parsedSkill = parseFloat(skill);
+  
+    if (!trimmedName || isNaN(parsedSkill)) {
+      setMessage('Enter valid name and skill');
+      return;
+    }
+  
+    const newPlayer = { name: trimmedName, skill: parsedSkill };
+    try {
+      const updatedPlayers = [...players, newPlayer];
+      setPlayers(updatedPlayers);
+      await AsyncStorage.setItem(STORAGE_KEYS.players, JSON.stringify(updatedPlayers));
+      setMessage('Player registered');
+    } catch (err) {
+      console.error('Failed to register player:', err);
+      setMessage('Error saving player');
+    }
+  
+    setName('');
+    setSkill('');
+    setTimeout(() => setMessage(''), 2000);
+  };
 
-  if (!trimmedName || isNaN(parsedSkill)) {
-    setMessage('Enter valid name and skill');
-    return;
-  }
-
-  const newPlayer = { name: trimmedName, skill: parsedSkill };
-  try {
-    await setDoc(doc(db, 'players', trimmedName), newPlayer);
-    const updatedPlayers = [...players, newPlayer];
-    setPlayers(updatedPlayers);
-    await AsyncStorage.setItem('players', JSON.stringify(updatedPlayers));
-    setMessage('Player registered');
-  } catch (err) {
-    console.error('Failed to register player:', err);
-    setMessage('Error saving player');
-  }
-
-  setName('');
-  setSkill('');
-  setTimeout(() => setMessage(''), 2000);
-};
-
-const updatePlayer = async (index: number) => {
-  const nameInput = editedName.trim();
-  const skillInput = parseFloat(editedSkill);
-  const updated = [...players];
-
-  if (nameInput) updated[index].name = nameInput;
-  if (!isNaN(skillInput)) updated[index].skill = skillInput;
-
-  setPlayers(updated);
-  setEditModeIndex(null);
-  setEditedName('');
-  setEditedSkill('');
-
-  await setDoc(doc(db, 'players', updated[index].name), updated[index]);
-};
+  const updatePlayer = async (index: number) => {
+    const nameInput = editedName.trim();
+    const skillInput = parseFloat(editedSkill);
+    const updated = [...players];
+  
+    if (nameInput) updated[index].name = nameInput;
+    if (!isNaN(skillInput)) updated[index].skill = skillInput;
+  
+    setPlayers(updated);
+    setEditModeIndex(null);
+    setEditedName('');
+    setEditedSkill('');
+  };
 
   const loginAdmin = () => {
     if (adminCode === 'nlvb2025') {
@@ -236,18 +169,14 @@ const updatePlayer = async (index: number) => {
       Alert.alert('Incorrect admin code');
     }
   };
-
+  
   const logoutAdmin = () => {
     setIsAdmin(false);
   };
 
-const resetCheckIns = async () => {
-  for (const name of checkedInPlayers) {
-    await deleteDoc(doc(db, 'checkedInPlayers', name));
-  }
-  setCheckedInPlayers([]);
-};
-
+  const resetCheckIns = async () => {
+    setCheckedInPlayers([]);
+  };
 
   const confirmResetCheckIns = () => {
     Alert.alert(
@@ -276,7 +205,7 @@ const resetCheckIns = async () => {
     await AsyncStorage.removeItem(STORAGE_KEYS.tournamentTeams);
     setNewTeamName('');
   };  
-
+  
   const confirmResetTournament = () => {
     Alert.alert(
       'Confirm Reset',
@@ -287,7 +216,7 @@ const resetCheckIns = async () => {
       ]
     );
   };
-
+  
   const addTeamToTournament = async () => {
     const trimmed = newTeamName.trim();
     if (
@@ -304,22 +233,10 @@ const resetCheckIns = async () => {
       const updated = [...tournamentTeams, newTeam];
       setTournamentTeams(updated);
       setNewTeamName('');
-  
-      try {
-        await setDoc(doc(db, "tournamentTeams", trimmed), newTeam);
-      } catch (err) {
-        console.error("Failed to save team to Firestore:", err);
-      }
     }
   };
-
-const loadTeamsFromFirebase = async () => {
-  const snapshot = await getDocs(collection(db, "tournamentTeams"));
-  const teams = snapshot.docs.map(doc => doc.data() as TournamentTeam);
-  setTournamentTeams(teams);
-};
-
-const generateBracket = () => {
+  
+  const generateBracket = () => {
     const shuffled = [...tournamentTeams.map(t => t.name)];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -335,22 +252,18 @@ const generateBracket = () => {
       }
     }
   
-    setRounds([firstRound]); // initialize with round 1
+    setRounds([firstRound]);
     setShowBracket(true);
   };
   
   const handleWinnerSelect = (roundIndex: number, matchIndex: number, winner: string) => {
     const newRounds = [...rounds];
-  
-    // Save winner to current match
     newRounds[roundIndex][matchIndex] = [winner, ''];
   
-    // Check if current round is complete
     const isRoundComplete = newRounds[roundIndex].every(
       match => match[0] && (match[1] === '' || match[1] === 'BYE')
     );
   
-    // Generate next round if this one is complete and not already created
     if (isRoundComplete && newRounds.length === roundIndex + 1) {
       const nextRound: string[][] = [];
       const winners = newRounds[roundIndex].map(match => match[0]);
@@ -365,8 +278,8 @@ const generateBracket = () => {
     }
   
     setRounds(newRounds);
-  };  
-
+  };
+  
   const promptUpdateRating = (index: number) => {
     Alert.prompt(
       'Update Rating',
@@ -383,7 +296,7 @@ const generateBracket = () => {
       tournamentTeams[index].rating.toString()
     );
   };
-
+  
   const promptAddMember = (index: number) => {
     Alert.prompt(
       'Add Member',
@@ -395,43 +308,40 @@ const generateBracket = () => {
           if (!updated[index].members.includes(trimmed)) {
             updated[index].members.push(trimmed);
             setTournamentTeams(updated);
-            await AsyncStorage.setItem(STORAGE_KEYS.tournamentTeams, JSON.stringify(updated)); // 💾 Save to memory!
+            await AsyncStorage.setItem(STORAGE_KEYS.tournamentTeams, JSON.stringify(updated));
           }
         }
       }
     );
   };
-;
-
-  const checkInFromAdmin = (name: string) => {
-    if (!checkedInPlayers.includes(name)) {
-      setCheckedInPlayers([...checkedInPlayers, name]);
+  
+  const checkInFromAdmin = (playerName: string) => {
+    if (!checkedInPlayers.includes(playerName)) {
+      setCheckedInPlayers([...checkedInPlayers, playerName]);
     }
   };
-
+  
   const distributeGroups = () => {
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
-  
-    // Shuffle players of the same skill level
     const shuffled = [...eligible].sort((a, b) => {
       if (a.skill === b.skill) {
-        return Math.random() - 0.5; // randomize same-skill players
+        return Math.random() - 0.5;
       }
-      return b.skill - a.skill; // keep descending order by skill
+      return b.skill - a.skill;
     });
   
     const teams: Player[][] = Array.from({ length: numGroups }, () => []);
     const totals = new Array(numGroups).fill(0);
   
     for (const player of shuffled) {
-      const index = totals.indexOf(Math.min(...totals)); // insert into weakest team
+      const index = totals.indexOf(Math.min(...totals));
       teams[index].push(player);
       totals[index] += player.skill;
     }
   
     setGroups(teams);
-  };    
-
+  };
+  
   const updateTeamStat = (index: number, stat: 'wins' | 'losses', increment: number) => {
     const updatedTeams = [...tournamentTeams];
     updatedTeams[index][stat] += increment;
@@ -459,18 +369,18 @@ const generateBracket = () => {
       borderRadius: 6
     },
     groupBox: {
-        marginTop: 15,
-        padding: 14,
-        backgroundColor: '#e8f0fe',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#b0c4de',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-      },
+      marginTop: 15,
+      padding: 14,
+      backgroundColor: '#e8f0fe',
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#b0c4de',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
     groupTitle: { fontWeight: 'bold', marginBottom: 5 },
     actionsRow: {
       flexDirection: 'row',
@@ -517,32 +427,28 @@ const generateBracket = () => {
       justifyContent: 'space-between',
       marginBottom: 8,
     },
-    
     groupMetaText: {
       fontSize: 14,
       fontWeight: '600',
       color: '#333',
     },
-    
     groupPlayers: {
       borderTopWidth: 1,
       borderTopColor: '#ccc',
       paddingTop: 8,
     },
-    
     groupPlayerText: {
       fontSize: 14,
       marginBottom: 4,
-    }    
+    }
   });
-
+  
   return (
     <SafeAreaView style={styles.fullScreen}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
         <Text style={styles.header}>NLVB App</Text>
         <Text style={styles.subheader}>Checked-in: {checkedInPlayers.length}</Text>
-
-                {!isAdmin ? (
+        {!isAdmin ? (
           <View>
             <TextInput
               placeholder="Your name"
@@ -553,7 +459,6 @@ const generateBracket = () => {
             />
             <Button title="Check In" onPress={checkInPlayer} />
             {message ? <Text style={styles.message}>{message}</Text> : null}
-  
             <Text style={styles.subheader}>Admin Login</Text>
             <TextInput
               placeholder="Admin code"
@@ -567,11 +472,9 @@ const generateBracket = () => {
           </View>
         ) : (
           <View>
-            {/* 🧩 Dropdown Menu */}
             <Pressable style={styles.dropdownHeader} onPress={() => setMenuOpen(!menuOpen)}>
               <Text style={styles.dropdownHeaderText}>Menu ▼</Text>
             </Pressable>
-  
             {menuOpen && (
               <View style={styles.dropdownMenu}>
                 <Pressable onPress={() => setActiveTab('players')} style={styles.dropdownItem}>
@@ -585,8 +488,6 @@ const generateBracket = () => {
                 </Pressable>
               </View>
             )}
-  
-            {/* 📋 Players Tab */}
             {activeTab === 'players' && (
               <>
                 <Text style={styles.subheader}>Register New Player</Text>
@@ -607,25 +508,20 @@ const generateBracket = () => {
                 />
                 <Button title="Register Player" onPress={registerPlayerAsAdmin} />
                 {message ? <Text style={styles.message}>{message}</Text> : null}
-  
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, marginBottom: 10 }}>
-  <Text style={styles.subheader}>Players ({players.length})</Text>
-  {isAdmin && (
-    <Button
-      title="Check In All"
-      onPress={async () => {
-        const allNames = players.map(p => p.name);
-        setCheckedInPlayers(allNames);
-        for (const name of allNames) {
-          await setDoc(doc(db, 'checkedInPlayers', name), { name });
-        }
-        setMessage('All players checked in');
-        setTimeout(() => setMessage(''), 2000);
-      }}
-    />
-  )}
-</View>
-
+                  <Text style={styles.subheader}>Players ({players.length})</Text>
+                  {isAdmin && (
+                    <Button
+                      title="Check In All"
+                      onPress={async () => {
+                        const allNames = players.map(p => p.name);
+                        setCheckedInPlayers(allNames);
+                        setMessage('All players checked in');
+                        setTimeout(() => setMessage(''), 2000);
+                      }}
+                    />
+                  )}
+                </View>
                 {players.map((p, i) => (
                   <View key={i} style={styles.playerRow}>
                     <TouchableOpacity onPress={() => setExpandedPlayer(expandedPlayer === i ? null : i)}>
@@ -634,7 +530,6 @@ const generateBracket = () => {
                         {checkedInPlayers.includes(p.name) ? ' ✅' : ''}
                       </Text>
                     </TouchableOpacity>
-  
                     {expandedPlayer === i && (
                       <View style={styles.actionsRow}>
                         <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.name)} />
@@ -643,32 +538,29 @@ const generateBracket = () => {
                           setEditedName(p.name);
                           setEditedSkill(p.skill.toString());
                         }} />
-                       <Button
-  title="Delete"
-  color="#f44336"
-  onPress={() => {
-    Alert.alert(
-      'Confirm Delete',
-      `Are you sure you want to delete ${p.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const updated = players.filter((_, idx) => idx !== i);
-            setPlayers(updated);
-            await deleteDoc(doc(db, 'players', p.name)); // 💥 This deletes from Firebase too!
-          },
-        },
-      ]
-    );
-  }}
-/>
-
+                        <Button
+                          title="Delete"
+                          color="#f44336"
+                          onPress={() => {
+                            Alert.alert(
+                              'Confirm Delete',
+                              `Are you sure you want to delete ${p.name}?`,
+                              [
+                                { text: 'Cancel', style: 'cancel' },
+                                {
+                                  text: 'Delete',
+                                  style: 'destructive',
+                                  onPress: async () => {
+                                    const updated = players.filter((_, idx) => idx !== i);
+                                    setPlayers(updated);
+                                  },
+                                },
+                              ]
+                            );
+                          }}
+                        />
                       </View>
                     )}
-  
                     {editModeIndex === i && (
                       <View>
                         <TextInput
@@ -693,59 +585,49 @@ const generateBracket = () => {
                 ))}
               </>
             )}
-  
-            {/* 🧠 Groups Tab */}
             {activeTab === 'settings' && (
-  <>
-    <Text style={styles.subheader}>Generated Groups</Text>
-
-    <TextInput
-      placeholder="Number of Groups"
-      placeholderTextColor="#333"
-      keyboardType="numeric"
-      value={numGroupsText}
-      onChangeText={(text) => {
-        setNumGroupsText(text);
-        const parsed = parseInt(text);
-        if (!isNaN(parsed)) setNumGroups(parsed);
-      }}
-      style={styles.input}
-    />
-
-    {groups.map((g, i) => {
-      const groupSkill = g.reduce((acc, p) => acc + p.skill, 0);
-      return (
-        <View key={i} style={styles.groupBox}>
-          <Text style={styles.groupTitle}>Group {i + 1}</Text>
-
-          <View style={styles.groupMetaRow}>
-            <Text style={styles.groupMetaText}>Players: {g.length}</Text>
-            <Text style={styles.groupMetaText}>Total Skill: {groupSkill}</Text>
-          </View>
-
-          <View style={styles.groupPlayers}>
-            {g.map((p, j) => (
-              <Text key={j} style={styles.groupPlayerText}>
-                • {p.name} <Text style={{ color: '#888' }}>(Skill: {p.skill})</Text>
-              </Text>
-            ))}
-          </View>
-        </View>
-      );
-    })}
-
-    <Button title="Generate Groups" onPress={distributeGroups} />
-    {groups.length > 0 && (
-      <Button title="Regenerate" onPress={distributeGroups} color="#2196F3" />
-    )}
-  </>
-)}
-  
-            {/* 🏆 Tournaments Tab */}
+              <>
+                <Text style={styles.subheader}>Generated Groups</Text>
+                <TextInput
+                  placeholder="Number of Groups"
+                  placeholderTextColor="#333"
+                  keyboardType="numeric"
+                  value={numGroupsText}
+                  onChangeText={(text) => {
+                    setNumGroupsText(text);
+                    const parsed = parseInt(text);
+                    if (!isNaN(parsed)) setNumGroups(parsed);
+                  }}
+                  style={styles.input}
+                />
+                {groups.map((g, i) => {
+                  const groupSkill = g.reduce((acc, p) => acc + p.skill, 0);
+                  return (
+                    <View key={i} style={styles.groupBox}>
+                      <Text style={styles.groupTitle}>Group {i + 1}</Text>
+                      <View style={styles.groupMetaRow}>
+                        <Text style={styles.groupMetaText}>Players: {g.length}</Text>
+                        <Text style={styles.groupMetaText}>Total Skill: {groupSkill}</Text>
+                      </View>
+                      <View style={styles.groupPlayers}>
+                        {g.map((p, j) => (
+                          <Text key={j} style={styles.groupPlayerText}>
+                            • {p.name} <Text style={{ color: '#888' }}>(Skill: {p.skill})</Text>
+                          </Text>
+                        ))}
+                      </View>
+                    </View>
+                  );
+                })}
+                <Button title="Generate Groups" onPress={distributeGroups} />
+                {groups.length > 0 && (
+                  <Button title="Regenerate" onPress={distributeGroups} color="#2196F3" />
+                )}
+              </>
+            )}
             {activeTab === 'tournaments' && (
               <>
                 <Text style={styles.subheader}>Tournaments</Text>
-
                 <TextInput
                   placeholder="Team Name"
                   placeholderTextColor="#333"
@@ -755,91 +637,83 @@ const generateBracket = () => {
                 />
                 <Button title="Add Team" onPress={addTeamToTournament} />
                 <Button
-  title="Generate Bracket"
-  color="#4A90E2"
-  onPress={() => {
-    generateBracket(); // This updates `bracket` state inside the function
-  }}
-/>
+                  title="Generate Bracket"
+                  color="#4A90E2"
+                  onPress={generateBracket}
+                />
                 {tournamentTeams.length > 0 && (
                   <Button title="Reset Tournament" color="#f44336" onPress={confirmResetTournament} />
                 )}
                 <Button
-  title={showBracket ? "Hide Bracket" : "View Bracket"}
-  onPress={() => setShowBracket(!showBracket)}
-  color="#8e44ad"
-/>
-{showBracket && rounds.length > 0 && (
-  <View style={{ marginTop: 20 }}>
-    <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 10 }}>Tournament Bracket</Text>
-
-    {rounds.map((round, roundIndex) => (
-      <View key={roundIndex} style={{ marginBottom: 20 }}>
-        <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 6 }}>
-          Round {roundIndex + 1}
-        </Text>
-
-        {round.map((match, matchIndex) => (
-          <View
-            key={matchIndex}
-            style={{
-              borderWidth: 1,
-              borderColor: '#ccc',
-              padding: 12,
-              marginBottom: 8,
-              borderRadius: 6,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              {match.map((team, teamIndex) => {
-                const isWinner = rounds[roundIndex][matchIndex][0] === team;
-                return (
-                  <TouchableOpacity
-                    key={teamIndex}
-                    style={{
-                      flex: 1,
-                      alignItems: 'center',
-                      padding: 10,
-                      marginHorizontal: 5,
-                      borderRadius: 4,
-                      borderWidth: 1,
-                      borderColor: isWinner ? '#333' : '#aaa',
-                      backgroundColor: '#fff',
-                    }}
-                    onPress={() => handleWinnerSelect(roundIndex, matchIndex, team)}
-                  >
-                    <Text style={{ fontWeight: 'bold' }}>{team}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        ))}
-      </View>
-    ))}
-  </View>
-)}
-
+                  title={showBracket ? "Hide Bracket" : "View Bracket"}
+                  onPress={() => setShowBracket(!showBracket)}
+                  color="#8e44ad"
+                />
+                {showBracket && rounds.length > 0 && (
+                  <View style={{ marginTop: 20 }}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 10 }}>Tournament Bracket</Text>
+                    {rounds.map((round, roundIndex) => (
+                      <View key={roundIndex} style={{ marginBottom: 20 }}>
+                        <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 6 }}>
+                          Round {roundIndex + 1}
+                        </Text>
+                        {round.map((match, matchIndex) => (
+                          <View
+                            key={matchIndex}
+                            style={{
+                              borderWidth: 1,
+                              borderColor: '#ccc',
+                              padding: 12,
+                              marginBottom: 8,
+                              borderRadius: 6,
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                              {match.map((team, teamIndex) => {
+                                const isWinner = rounds[roundIndex][matchIndex][0] === team;
+                                return (
+                                  <TouchableOpacity
+                                    key={teamIndex}
+                                    style={{
+                                      flex: 1,
+                                      alignItems: 'center',
+                                      padding: 10,
+                                      marginHorizontal: 5,
+                                      borderRadius: 4,
+                                      borderWidth: 1,
+                                      borderColor: isWinner ? '#333' : '#aaa',
+                                      backgroundColor: '#fff',
+                                    }}
+                                    onPress={() => handleWinnerSelect(roundIndex, matchIndex, team)}
+                                  >
+                                    <Text style={{ fontWeight: 'bold' }}>{team}</Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    ))}
+                  </View>
+                )}
                 <Text style={styles.subheader}>Teams</Text>
                 {tournamentTeams.map((team, i) => (
-  <View key={i} style={styles.groupBox}>
-    <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{team.name}</Text>
-    <Text>Rating: {team.rating}</Text>
-    <Text>Members: {team.members.length > 0 ? team.members.join(', ') : 'None'}</Text>
-
-    <View style={styles.actionsRow}>
-      <Button title="Edit Rating" onPress={() => promptUpdateRating(i)} />
-      <Button title="Add Member" onPress={() => promptAddMember(i)} />
-    </View>
-  </View>
-))}
-                
+                  <View key={i} style={styles.groupBox}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{team.name}</Text>
+                    <Text>Rating: {team.rating}</Text>
+                    <Text>Members: {team.members.length > 0 ? team.members.join(', ') : 'None'}</Text>
+                    <View style={styles.actionsRow}>
+                      <Button title="Edit Rating" onPress={() => promptUpdateRating(i)} />
+                      <Button title="Add Member" onPress={() => promptAddMember(i)} />
+                    </View>
+                  </View>
+                ))}
               </>
             )}
           </View>
         )}
       </ScrollView>
-  
       {isAdmin && (
         <View style={styles.bottomActions}>
           <Button title="Reset All Check-ins" color="#f44336" onPress={confirmResetCheckIns} />
@@ -848,4 +722,4 @@ const generateBracket = () => {
       )}
     </SafeAreaView>
   );
-}  
+}
