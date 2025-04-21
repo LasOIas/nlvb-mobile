@@ -520,7 +520,6 @@ const generateBracket = () => {
         <Text style={styles.header}>NLVB App</Text>
         <Text style={styles.subheader}>Checked-in: {checkedInPlayers.length}</Text>
 
-        <Button title="Refresh Data" onPress={loadData} />
         {isAdmin && (
   <Button
     title="Check In All Players"
@@ -603,9 +602,24 @@ const generateBracket = () => {
                 <Button title="Register Player" onPress={registerPlayerAsAdmin} />
                 {message ? <Text style={styles.message}>{message}</Text> : null}
   
-                <Text style={styles.subheader}>
-  Players ({players.length})
-</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, marginBottom: 10 }}>
+  <Text style={styles.subheader}>Players ({players.length})</Text>
+  {isAdmin && (
+    <Button
+      title="Check In All"
+      onPress={async () => {
+        const allNames = players.map(p => p.name);
+        setCheckedInPlayers(allNames);
+        for (const name of allNames) {
+          await setDoc(doc(db, 'checkedInPlayers', name), { name });
+        }
+        setMessage('All players checked in');
+        setTimeout(() => setMessage(''), 2000);
+      }}
+    />
+  )}
+</View>
+
                 {players.map((p, i) => (
                   <View key={i} style={styles.playerRow}>
                     <TouchableOpacity onPress={() => setExpandedPlayer(expandedPlayer === i ? null : i)}>
