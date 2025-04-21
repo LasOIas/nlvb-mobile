@@ -175,18 +175,17 @@ const registerPlayerAsAdmin = async () => {
     return;
   }
 
-const newPlayer = { name: trimmedName, skill: parsedSkill };
-await setDoc(doc(db, 'players', trimmedName), newPlayer);
-console.log('Saved player to Firestore:', newPlayer);
-
-const exists = players.some(p => normalize(p.name) === normalize(trimmedName));
-if (!exists) {
-  // Save to Firebase
-  await setDoc(doc(db, 'players', trimmedName), newPlayer); // ✅ write to Firestore
-
-    setMessage('Player registered');
-  } else {
+  const exists = players.some(p => normalize(p.name) === normalize(trimmedName));
+  if (exists) {
     setMessage('Player already exists');
+  } else {
+    const newPlayer = { name: trimmedName, skill: parsedSkill };
+    await setDoc(doc(db, 'players', trimmedName), newPlayer); // ✅ Save to Firestore
+
+    const updatedPlayers = [...players, newPlayer];
+    setPlayers(updatedPlayers);
+    await AsyncStorage.setItem(STORAGE_KEYS.players, JSON.stringify(updatedPlayers));
+    setMessage('Player registered');
   }
 
   setName('');
