@@ -14,7 +14,6 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from '../services/firebase';
-import { onSnapshot } from "firebase/firestore";
 import { enableIndexedDbPersistence } from "firebase/firestore";
 
 interface Player {
@@ -139,7 +138,6 @@ if (!exists) {
   // Save to Firebase
   await setDoc(doc(db, 'players', trimmedName), newPlayer); // ✅ write to Firestore
 
-    // setPlayers happens automatically from onSnapshot
     setMessage('Player registered');
   } else {
     setMessage('Player already exists');
