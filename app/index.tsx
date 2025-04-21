@@ -109,6 +109,23 @@ useEffect(() => {
 useEffect(() => {
   const restoreFromStorage = async () => {
     try {
+      const playersRaw = await AsyncStorage.getItem('players');
+      if (playersRaw) {
+        setPlayers(JSON.parse(playersRaw));
+      } else {
+        await loadData();
+      }
+    } catch (err) {
+      console.error("Failed to restore local state:", err);
+    }
+  };
+
+  restoreFromStorage();
+}, []);
+
+useEffect(() => {
+  const restoreFromStorage = async () => {
+    try {
       const playersRaw = await AsyncStorage.getItem(STORAGE_KEYS.players);
       const checkinsRaw = await AsyncStorage.getItem(STORAGE_KEYS.checkedInPlayers);
       const teamsRaw = await AsyncStorage.getItem(STORAGE_KEYS.tournamentTeams);
@@ -175,17 +192,17 @@ const registerPlayerAsAdmin = async () => {
     return;
   }
 
-  const exists = players.some(p => normalize(p.name) === normalize(trimmedName));
-  if (exists) {
-    setMessage('Player already exists');
-  } else {
-    const newPlayer = { name: trimmedName, skill: parsedSkill };
-    await setDoc(doc(db, 'players', trimmedName), newPlayer); // ✅ Save to Firestore
+  const newPlayer = { name: trimmedName, skill: parsedSkill };
 
+  try {
+    await setDoc(doc(db, 'players', trimmedName), newPlayer);
     const updatedPlayers = [...players, newPlayer];
     setPlayers(updatedPlayers);
-    await AsyncStorage.setItem(STORAGE_KEYS.players, JSON.stringify(updatedPlayers));
+    await AsyncStorage.setItem('players', JSON.stringify(updatedPlayers));
     setMessage('Player registered');
+  } catch (error) {
+    console.error('Failed to save player to Firestore:', error);
+    setMessage('Error saving player');
   }
 
   setName('');

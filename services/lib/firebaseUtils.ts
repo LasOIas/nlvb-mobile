@@ -37,10 +37,6 @@ interface Player {
   [key: string]: any;
 }
 
-export const savePlayer = async (player: Player) => {
-  await setDoc(doc(db, 'players', player.name), player);
-};
-
 export const deletePlayer = async (name: string) => {
   await deleteDoc(doc(db, 'players', name));
 };
