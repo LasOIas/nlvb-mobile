@@ -22,9 +22,6 @@ import {
 } from 'firebase/firestore'; // imported from firebase/firestore
 import { db } from '../services/firebase';
 import { initializeApp } from 'firebase/app';
-import {
-  persistentLocalCache
-} from 'firebase/firestore';
 
 interface Player {
   name: string;
