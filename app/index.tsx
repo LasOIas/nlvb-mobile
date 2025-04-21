@@ -62,23 +62,27 @@ const STORAGE_KEYS = {
 };
 
 const loadData = async () => {
-  const playerSnap = await getDocs(collection(db, 'players'));
-  const checkinsSnap = await getDocs(collection(db, 'checkedInPlayers'));
-  const teamSnap = await getDocs(collection(db, 'tournamentTeams'));
-  const groupSnap = await getDocs(collection(db, 'groups'));
-  const roundsSnap = await getDocs(collection(db, 'rounds'));
+  try {
+    const playerSnap = await getDocs(collection(db, 'players'));
+    const checkinsSnap = await getDocs(collection(db, 'checkedInPlayers'));
+    const teamSnap = await getDocs(collection(db, 'tournamentTeams'));
+    const groupSnap = await getDocs(collection(db, 'groups'));
+    const roundsSnap = await getDocs(collection(db, 'rounds'));
+    const metaDoc = await getDoc(doc(db, 'meta', 'global'));
 
-  const metaDoc = await getDoc(doc(db, 'meta', 'global'));
+    setPlayers(playerSnap.docs.map(d => d.data() as Player));
+    setCheckedInPlayers(checkinsSnap.docs.map(d => d.id));
+    setTournamentTeams(teamSnap.docs.map(d => d.data() as TournamentTeam));
+    setGroups(groupSnap.docs.map(d => d.data().group as Player[]));
+    setRounds(roundsSnap.docs.map(d => d.data().round as string[][]));
 
-  setPlayers(playerSnap.docs.map(d => d.data() as Player));
-  setCheckedInPlayers(checkinsSnap.docs.map(d => d.id));
-  setTournamentTeams(teamSnap.docs.map(d => d.data() as TournamentTeam));
-  setGroups(groupSnap.docs.map(d => d.data().group as Player[]));
-  setRounds(roundsSnap.docs.map(d => d.data().round as string[][]));
-  if (metaDoc.exists()) {
-    const meta = metaDoc.data();
-    if (meta.activeTab) setActiveTab(meta.activeTab);
-    if (meta.isAdmin !== undefined) setIsAdmin(meta.isAdmin);
+    if (metaDoc.exists()) {
+      const meta = metaDoc.data();
+      if (meta.activeTab) setActiveTab(meta.activeTab);
+      if (meta.isAdmin !== undefined) setIsAdmin(meta.isAdmin);
+    }
+  } catch (error) {
+    console.error("Error loading data:", error);
   }
 };
 
@@ -98,62 +102,6 @@ const loadFirebaseTournamentTeams = async () => {
     console.error("Error loading teams from Firestore:", error);
   }
 };
-
-useEffect(() => {
-  loadFirebaseTournamentTeams();
-}, []);
-
-// Sync players
-useEffect(() => {
-  const unsubscribe = onSnapshot(collection(db, 'players'), (snapshot) => {
-    setPlayers(snapshot.docs.map(doc => doc.data() as Player));
-  });
-  return () => unsubscribe();
-}, []);
-
-// Sync checkedInPlayers
-useEffect(() => {
-  const unsubscribe = onSnapshot(collection(db, 'checkedInPlayers'), (snapshot) => {
-    setCheckedInPlayers(snapshot.docs.map(doc => doc.id));
-  });
-  return () => unsubscribe();
-}, []);
-
-// Sync tournamentTeams
-useEffect(() => {
-  const unsubscribe = onSnapshot(collection(db, 'tournamentTeams'), (snapshot) => {
-    setTournamentTeams(snapshot.docs.map(doc => doc.data() as TournamentTeam));
-  });
-  return () => unsubscribe();
-}, []);
-
-// Sync groups
-useEffect(() => {
-  const unsubscribe = onSnapshot(collection(db, 'groups'), (snapshot) => {
-    setGroups(snapshot.docs.map(doc => doc.data().group as Player[]));
-  });
-  return () => unsubscribe();
-}, []);
-
-// Sync rounds
-useEffect(() => {
-  const unsubscribe = onSnapshot(collection(db, 'rounds'), (snapshot) => {
-    setRounds(snapshot.docs.map(doc => doc.data().round as string[][]));
-  });
-  return () => unsubscribe();
-}, []);
-
-// Sync meta (admin & tab)
-useEffect(() => {
-  const unsubscribe = onSnapshot(doc(db, 'meta', 'global'), (docSnap) => {
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      if (data.activeTab) setActiveTab(data.activeTab);
-      if (data.isAdmin !== undefined) setIsAdmin(data.isAdmin);
-    }
-  });
-  return () => unsubscribe();
-}, []);
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
