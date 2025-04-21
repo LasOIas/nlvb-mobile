@@ -14,7 +14,6 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from '../services/firebase';
-import { enableIndexedDbPersistence } from "firebase/firestore";
 import { initializeApp } from 'firebase/app';
 import {
   initializeFirestore,
