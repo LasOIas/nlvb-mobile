@@ -520,23 +520,7 @@ const generateBracket = () => {
         <Text style={styles.header}>NLVB App</Text>
         <Text style={styles.subheader}>Checked-in: {checkedInPlayers.length}</Text>
 
-        {isAdmin && (
-  <Button
-    title="Check In All Players"
-    color="#4CAF50"
-    onPress={async () => {
-      const allNames = players.map(p => p.name);
-      setCheckedInPlayers(allNames);
-      for (const name of allNames) {
-        await setDoc(doc(db, 'checkedInPlayers', name), { name });
-      }
-      setMessage('All players checked in');
-      setTimeout(() => setMessage(''), 2000);
-    }}
-  />
-)}
-  
-        {!isAdmin ? (
+                {!isAdmin ? (
           <View>
             <TextInput
               placeholder="Your name"
