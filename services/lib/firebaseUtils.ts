@@ -1,8 +1,9 @@
 // app/firebase.ts
 import { initializeApp } from 'firebase/app';
 import {
-  getFirestore,
   enableIndexedDbPersistence,
+  initializeFirestore,
+  persistentLocalCache,
   collection,
   doc,
   setDoc,
@@ -23,7 +24,10 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache()
+});
 
 // Enable persistence BEFORE any reads/writes
 enableIndexedDbPersistence(db).catch((err) => {
