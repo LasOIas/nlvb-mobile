@@ -3,7 +3,6 @@ import { initializeApp } from 'firebase/app';
 import {
   initializeFirestore,
   persistentLocalCache,
-  enableIndexedDbPersistence
 } from 'firebase/firestore';
 
 const firebaseConfig = {

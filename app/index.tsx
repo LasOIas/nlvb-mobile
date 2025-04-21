@@ -12,11 +12,17 @@ import {
   SafeAreaView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  getDoc,
+  setDoc,
+  deleteDoc,
+  doc,
+} from 'firebase/firestore'; // imported from firebase/firestore
 import { db } from '../services/firebase';
 import { initializeApp } from 'firebase/app';
 import {
-  initializeFirestore,
   persistentLocalCache
 } from 'firebase/firestore';
 
@@ -193,15 +199,14 @@ const registerPlayerAsAdmin = async () => {
   }
 
   const newPlayer = { name: trimmedName, skill: parsedSkill };
-
   try {
     await setDoc(doc(db, 'players', trimmedName), newPlayer);
     const updatedPlayers = [...players, newPlayer];
     setPlayers(updatedPlayers);
     await AsyncStorage.setItem('players', JSON.stringify(updatedPlayers));
     setMessage('Player registered');
-  } catch (error) {
-    console.error('Failed to save player to Firestore:', error);
+  } catch (err) {
+    console.error('Failed to register player:', err);
     setMessage('Error saving player');
   }
 
