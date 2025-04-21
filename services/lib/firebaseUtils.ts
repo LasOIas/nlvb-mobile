@@ -1,7 +1,6 @@
 // app/firebase.ts
 import { initializeApp } from 'firebase/app';
 import {
-  enableIndexedDbPersistence,
   initializeFirestore,
   persistentLocalCache,
   collection,
@@ -27,17 +26,6 @@ const app = initializeApp(firebaseConfig);
 
 const db = initializeFirestore(app, {
   localCache: persistentLocalCache()
-});
-
-// Enable persistence BEFORE any reads/writes
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === 'failed-precondition') {
-    console.warn('Persistence failed — multiple tabs open.');
-  } else if (err.code === 'unimplemented') {
-    console.warn('Persistence is not available in this environment.');
-  } else {
-    console.warn('Persistence error:', err);
-  }
 });
 
 export { db };
