@@ -86,12 +86,6 @@ useEffect(() => {
   loadData();
 }, []);
 
-useEffect(() => {
-  enableIndexedDbPersistence(db).catch((err) => {
-    console.warn("Persistence failed:", err);
-  });
-}, []);
-
 const loadFirebaseTournamentTeams = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, "tournamentTeams"));

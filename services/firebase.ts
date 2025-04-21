@@ -1,6 +1,9 @@
 // app/firebase.ts
 import { initializeApp } from 'firebase/app';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import {
+  getFirestore,
+  enableIndexedDbPersistence
+} from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCxntCdrDUnK1ik8WifA4OI8DixVJ_K_Hs',
@@ -13,8 +16,17 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+const db = getFirestore(app);
 
+// ✅ ENABLE PERSISTENCE EARLY
 enableIndexedDbPersistence(db).catch((err) => {
-  console.warn('Persistence error:', err);
+  if (err.code === 'failed-precondition') {
+    console.warn('Persistence failed due to multiple tabs.');
+  } else if (err.code === 'unimplemented') {
+    console.warn('Persistence not supported in this environment.');
+  } else {
+    console.warn('Persistence error:', err);
+  }
 });
+
+export { db };
