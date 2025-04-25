@@ -544,7 +544,13 @@ export default function App() {
                   )}
                 </View>
                 {players.map((p, i) => (
-                  <View key={i} style={styles.playerRow}>
+                  <View
+                  key={i}
+                  style={[
+                    styles.playerRow,
+                    p.skill === 0 && { backgroundColor: '#FFF9C4' } // light yellow for new
+                  ]}
+                >                
                     <TouchableOpacity onPress={() => setExpandedPlayer(expandedPlayer === i ? null : i)}>
                       <Text>
                         {p.name} (Skill: {p.skill})
