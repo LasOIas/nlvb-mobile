@@ -607,6 +607,10 @@ export default function App() {
                   }}
                   style={styles.input}
                 />
+                <Button title="Generate Groups" onPress={distributeGroups} />
+                {groups.length > 0 && (
+                  <Button title="Regenerate" onPress={distributeGroups} color="#2196F3" />
+                )}
                 {groups.map((g, i) => {
                   const groupSkill = g.reduce((acc, p) => acc + p.skill, 0);
                   return (
@@ -626,10 +630,6 @@ export default function App() {
                     </View>
                   );
                 })}
-                <Button title="Generate Groups" onPress={distributeGroups} />
-                {groups.length > 0 && (
-                  <Button title="Regenerate" onPress={distributeGroups} color="#2196F3" />
-                )}
               </>
             )}
             {activeTab === 'tournaments' && (
