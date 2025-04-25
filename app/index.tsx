@@ -315,11 +315,15 @@ export default function App() {
     );
   };
   
-  const checkInFromAdmin = (playerName: string) => {
-    if (!checkedInPlayers.includes(playerName)) {
-      setCheckedInPlayers([...checkedInPlayers, playerName]);
+  const checkInFromAdmin = (name: string) => {
+    if (!checkedInPlayers.includes(name)) {
+      setCheckedInPlayers([...checkedInPlayers, name]);
     }
   };
+  
+  const checkOutPlayer = (name: string) => {
+    setCheckedInPlayers(checkedInPlayers.filter(n => n !== name));
+  };  
   
   const distributeGroups = () => {
     const eligible = players.filter(p => checkedInPlayers.includes(p.name));
@@ -533,6 +537,9 @@ export default function App() {
                     {expandedPlayer === i && (
                       <View style={styles.actionsRow}>
                         <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.name)} />
+                        {checkedInPlayers.includes(p.name) && (
+  <Button title="Check Out" color="#FF9800" onPress={() => checkOutPlayer(p.name)} />
+)}
                         <Button title="Edit" color="#2196F3" onPress={() => {
                           setEditModeIndex(i);
                           setEditedName(p.name);
