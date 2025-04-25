@@ -122,6 +122,22 @@ export default function App() {
     setTimeout(() => setMessage(''), 2000);
   };
 
+  const registerPlayer = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+  
+    const exists = players.some(p => normalize(p.name) === normalize(trimmed));
+    if (!exists) {
+      setPlayers([...players, { name: trimmed, skill: 0 }]);
+      setMessage('Registered. Waiting for admin to set skill.');
+    } else {
+      setMessage('Player already exists');
+    }
+  
+    setName('');
+    setTimeout(() => setMessage(''), 2000);
+  };
+  
   const registerPlayerAsAdmin = async () => {
     const trimmedName = name.trim();
     const parsedSkill = parseFloat(skill);
@@ -462,6 +478,7 @@ export default function App() {
               onChangeText={setName}
             />
             <Button title="Check In" onPress={checkInPlayer} />
+            <Button title="Register" color="#2196F3" onPress={registerPlayer} />
             {message ? <Text style={styles.message}>{message}</Text> : null}
             <Text style={styles.subheader}>Admin Login</Text>
             <TextInput
