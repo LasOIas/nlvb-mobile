@@ -381,6 +381,10 @@ export default function App() {
       backgroundColor: '#fff',
       color: '#333',
     },
+    newTag: {
+      color: 'green',
+      fontWeight: 'bold',
+    },    
     message: { marginTop: 10, color: 'green' },
     playerRow: {
       marginTop: 10,
@@ -554,7 +558,8 @@ export default function App() {
                     <TouchableOpacity onPress={() => setExpandedPlayer(expandedPlayer === i ? null : i)}>
                       <Text>
                       <Text>
-  {p.name} (Skill: {p.skill}) {p.skill === 0 && '(NEW)'}
+  {p.name} (Skill: {p.skill}){' '}
+  {p.skill === 0 && <Text style={styles.newTag}>(NEW)</Text>}
 </Text>
                         {checkedInPlayers.includes(p.name) ? ' ✅' : ''}
                       </Text>
