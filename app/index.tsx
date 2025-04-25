@@ -553,7 +553,9 @@ export default function App() {
                 >                
                     <TouchableOpacity onPress={() => setExpandedPlayer(expandedPlayer === i ? null : i)}>
                       <Text>
-                        {p.name} (Skill: {p.skill})
+                      <Text>
+  {p.name} (Skill: {p.skill}) {p.skill === 0 && '(NEW)'}
+</Text>
                         {checkedInPlayers.includes(p.name) ? ' ✅' : ''}
                       </Text>
                     </TouchableOpacity>
