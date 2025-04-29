@@ -11,12 +11,16 @@ import {
     Pressable,
     SafeAreaView,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { fetchPlayers, addPlayer, updatePlayer as updatePlayerService, deletePlayer } from '../services/players';
+import { fetchCheckins, checkInPlayer as supabaseCheckIn, checkOutPlayer as supabaseCheckOut } from '../services/checkins';
 
 interface Player {
+  id: string;
   name: string;
   skill: number;
 }
+
 
 interface TournamentTeam {
   name: string;
@@ -49,94 +53,59 @@ export default function App() {
   const [showBracket, setShowBracket] = useState(false);
   const [rounds, setRounds] = useState<string[][][]>([]); // 3D array: rounds → matchups → teams
 
-  const STORAGE_KEYS = {
-    players: 'players',
-    checkedInPlayers: 'checkedInPlayers',
-    tournamentTeams: 'tournamentTeams',
-    groups: 'groups',
-    rounds: 'rounds',
-    activeTab: 'activeTab',
-  };
-
-  const loadData = async () => {
-    try {
-      // Fallback logic to load data if AsyncStorage is empty.
-    } catch (error) {
-      console.error("Error loading data:", error);
-    }
-  };
-
-  // Consolidated restoration of all storage data
+  // Remove AsyncStorage restoration and instead load from Supabase
   useEffect(() => {
-    const restoreAllData = async () => {
+    const loadData = async () => {
       try {
-        const [
-          playersRaw,
-          checkinsRaw,
-          teamsRaw,
-          groupsRaw,
-          roundsRaw,
-          activeTabRaw,
-        ] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_KEYS.players),
-          AsyncStorage.getItem(STORAGE_KEYS.checkedInPlayers),
-          AsyncStorage.getItem(STORAGE_KEYS.tournamentTeams),
-          AsyncStorage.getItem(STORAGE_KEYS.groups),
-          AsyncStorage.getItem(STORAGE_KEYS.rounds),
-          AsyncStorage.getItem(STORAGE_KEYS.activeTab),
-        ]);
-  
-        if (playersRaw) setPlayers(JSON.parse(playersRaw));
-        if (checkinsRaw) setCheckedInPlayers(JSON.parse(checkinsRaw));
-        if (teamsRaw) setTournamentTeams(JSON.parse(teamsRaw));
-        if (groupsRaw) setGroups(JSON.parse(groupsRaw));
-        if (roundsRaw) setRounds(JSON.parse(roundsRaw));
-        if (activeTabRaw) setActiveTab(activeTabRaw as any);
-  
-        // Fallback load if one of the key values is missing
-        if (!playersRaw || !checkinsRaw || !teamsRaw || !groupsRaw || !roundsRaw) {
-          await loadData();
-        }
-      } catch (err) {
-        console.error("Failed to restore local state:", err);
+        const playersData = await fetchPlayers();
+        if (playersData) setPlayers(playersData);
+        const checkinsData = await fetchCheckins();
+        if (checkinsData) setCheckedInPlayers(checkinsData);
+      } catch (error) {
+        console.error("Error fetching data from Supabase:", error);
       }
     };
-  
-    restoreAllData();
+    loadData();
   }, []);
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
-  const checkInPlayer = async () => {
+  const handleCheckIn = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const match = players.find(p => normalize(p.name) === normalize(trimmed));
-    if (match && !checkedInPlayers.includes(match.name)) {
-      const updated = [...checkedInPlayers, match.name];
-      setCheckedInPlayers(updated);
-      setMessage('Checked in');
+    const player = players.find(p => normalize(p.name) === normalize(trimmed));
+    if (player && !checkedInPlayers.includes(player.id)) {
+      try {
+        await supabaseCheckIn(player.id);
+        const updatedCheckins = await fetchCheckins();
+        setCheckedInPlayers(updatedCheckins);
+        setMessage('Checked in');
+      } catch (error) {
+        console.error("Error with check-in:", error);
+        setMessage('Error checking in');
+      }
     } else {
       setMessage('Player not found');
     }
     setName('');
     setTimeout(() => setMessage(''), 2000);
-  };
+  };  
 
-  const registerPlayer = () => {
+  const registerPlayer = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-  
     const exists = players.some(p => normalize(p.name) === normalize(trimmed));
     if (!exists) {
-      setPlayers([...players, { name: trimmed, skill: 0 }]);
+      await addPlayer(trimmed, 0);
+      const updatedPlayers = await fetchPlayers();
+      setPlayers(updatedPlayers);
       setMessage('Registered. Waiting for admin to set skill.');
     } else {
       setMessage('Player already exists');
     }
-  
     setName('');
     setTimeout(() => setMessage(''), 2000);
-  };
+  };  
   
   const registerPlayerAsAdmin = async () => {
     const trimmedName = name.trim();
@@ -147,17 +116,15 @@ export default function App() {
       return;
     }
   
-    const newPlayer = { name: trimmedName, skill: parsedSkill };
     try {
-      const updatedPlayers = [...players, newPlayer];
+      await addPlayer(trimmedName, parsedSkill);
+      const updatedPlayers = await fetchPlayers();
       setPlayers(updatedPlayers);
-      await AsyncStorage.setItem(STORAGE_KEYS.players, JSON.stringify(updatedPlayers));
       setMessage('Player registered');
     } catch (err) {
       console.error('Failed to register player:', err);
       setMessage('Error saving player');
     }
-  
     setName('');
     setSkill('');
     setTimeout(() => setMessage(''), 2000);
@@ -166,12 +133,18 @@ export default function App() {
   const updatePlayer = async (index: number) => {
     const nameInput = editedName.trim();
     const skillInput = parseFloat(editedSkill);
-    const updated = [...players];
-  
-    if (nameInput) updated[index].name = nameInput;
-    if (!isNaN(skillInput)) updated[index].skill = skillInput;
-  
-    setPlayers(updated);
+    const currentPlayer = players[index];
+    const updatedPlayer = {
+      name: nameInput || currentPlayer.name,
+      skill: !isNaN(skillInput) ? skillInput : currentPlayer.skill
+    };
+    try {
+      await updatePlayerService(currentPlayer.name, updatedPlayer.name, updatedPlayer.skill);
+      const updatedPlayers = await fetchPlayers();
+      setPlayers(updatedPlayers);
+    } catch (error) {
+      console.error('Failed to update player:', error);
+    }
     setEditModeIndex(null);
     setEditedName('');
     setEditedSkill('');
@@ -191,7 +164,18 @@ export default function App() {
   };
 
   const resetCheckIns = async () => {
-    setCheckedInPlayers([]);
+    // For simplicity, assume you have a Supabase endpoint to reset checkins.
+    // Alternatively, you could check out every player.
+    // Here, we simply clear the local state by checking out all players.
+    try {
+      for (const player of checkedInPlayers) {
+        await supabaseCheckOut(player);
+      }
+      const updatedCheckins = await fetchCheckins();
+      setCheckedInPlayers(updatedCheckins);
+    } catch (error) {
+      console.error("Error resetting check-ins:", error);
+    }
   };
 
   const confirmResetCheckIns = () => {
@@ -216,9 +200,9 @@ export default function App() {
     );
   };
   
+  // Tournament functions (kept local)
   const resetTournament = async () => {
     setTournamentTeams([]);
-    await AsyncStorage.removeItem(STORAGE_KEYS.tournamentTeams);
     setNewTeamName('');
   };  
   
@@ -246,8 +230,7 @@ export default function App() {
         wins: 0,
         losses: 0
       };
-      const updated = [...tournamentTeams, newTeam];
-      setTournamentTeams(updated);
+      setTournamentTeams([...tournamentTeams, newTeam]);
       setNewTeamName('');
     }
   };
@@ -275,11 +258,9 @@ export default function App() {
   const handleWinnerSelect = (roundIndex: number, matchIndex: number, winner: string) => {
     const newRounds = [...rounds];
     newRounds[roundIndex][matchIndex] = [winner, ''];
-  
     const isRoundComplete = newRounds[roundIndex].every(
       match => match[0] && (match[1] === '' || match[1] === 'BYE')
     );
-  
     if (isRoundComplete && newRounds.length === roundIndex + 1) {
       const nextRound: string[][] = [];
       const winners = newRounds[roundIndex].map(match => match[0]);
@@ -292,7 +273,6 @@ export default function App() {
       }
       newRounds.push(nextRound);
     }
-  
     setRounds(newRounds);
   };
   
@@ -317,48 +297,54 @@ export default function App() {
     Alert.prompt(
       'Add Member',
       `Enter player name to add to ${tournamentTeams[index].name}`,
-      async (value) => {
-        const trimmed = value.trim();
-        if (trimmed) {
+      (value) => {
+        const trimmedMember = value.trim();
+        if (trimmedMember) {
           const updated = [...tournamentTeams];
-          if (!updated[index].members.includes(trimmed)) {
-            updated[index].members.push(trimmed);
+          if (!updated[index].members.includes(trimmedMember)) {
+            updated[index].members.push(trimmedMember);
             setTournamentTeams(updated);
-            await AsyncStorage.setItem(STORAGE_KEYS.tournamentTeams, JSON.stringify(updated));
           }
         }
       }
     );
   };
   
-  const checkInFromAdmin = (name: string) => {
-    if (!checkedInPlayers.includes(name)) {
-      setCheckedInPlayers([...checkedInPlayers, name]);
+  const checkInFromAdmin = async (playerId: string) => {
+    if (!checkedInPlayers.includes(playerId)) {
+      try {
+        await supabaseCheckIn(playerId);
+        const updatedCheckins = await fetchCheckins();
+        setCheckedInPlayers(updatedCheckins);
+      } catch (error) {
+        console.error("Error checking in from admin:", error);
+      }
     }
   };
   
-  const checkOutPlayer = (name: string) => {
-    setCheckedInPlayers(checkedInPlayers.filter(n => n !== name));
+  const checkOutFromAdmin = async (playerId: string) => {
+    try {
+      await supabaseCheckOut(playerId);
+      const updatedCheckins = await fetchCheckins();
+      setCheckedInPlayers(updatedCheckins);
+    } catch (error) {
+      console.error("Error checking out:", error);
+    }
   };  
   
   const distributeGroups = () => {
-    const eligible = players.filter(p => checkedInPlayers.includes(p.name));
+    const eligible = players.filter(p => checkedInPlayers.includes(p.id));
     const shuffled = [...eligible].sort((a, b) => {
-      if (a.skill === b.skill) {
-        return Math.random() - 0.5;
-      }
+      if (a.skill === b.skill) return Math.random() - 0.5;
       return b.skill - a.skill;
     });
-  
     const teams: Player[][] = Array.from({ length: numGroups }, () => []);
     const totals = new Array(numGroups).fill(0);
-  
     for (const player of shuffled) {
       const index = totals.indexOf(Math.min(...totals));
       teams[index].push(player);
       totals[index] += player.skill;
     }
-  
     setGroups(teams);
   };
   
@@ -384,7 +370,7 @@ export default function App() {
     newTag: {
       color: 'green',
       fontWeight: 'bold',
-    },    
+    },
     message: { marginTop: 10, color: 'green' },
     playerRow: {
       marginTop: 10,
@@ -481,7 +467,7 @@ export default function App() {
               value={name}
               onChangeText={setName}
             />
-            <Button title="Check In" onPress={checkInPlayer} />
+            <Button title="Check In" onPress={handleCheckIn} />
             <Button title="Register" color="#2196F3" onPress={registerPlayer} />
             {message ? <Text style={styles.message}>{message}</Text> : null}
             <Text style={styles.subheader}>Admin Login</Text>
@@ -539,37 +525,42 @@ export default function App() {
                     <Button
                       title="Check In All"
                       onPress={async () => {
-                        const allNames = players.map(p => p.name);
-                        setCheckedInPlayers(allNames);
-                        setMessage('All players checked in');
-                        setTimeout(() => setMessage(''), 2000);
+                        try {
+                          for (const p of players) {
+                            await supabaseCheckIn(p.id);
+                          }                          
+                          const updated = await fetchCheckins();
+                          setCheckedInPlayers(updated);
+                          setMessage('All players checked in');
+                          setTimeout(() => setMessage(''), 2000);
+                        } catch (error) {
+                          console.error("Error checking in all:", error);
+                        }
                       }}
                     />
                   )}
                 </View>
                 {players.map((p, i) => (
                   <View
-                  key={i}
-                  style={[
-                    styles.playerRow,
-                    p.skill === 0 && { backgroundColor: '#FFF9C4' } // light yellow for new
-                  ]}
-                >                
+                    key={i}
+                    style={[
+                      styles.playerRow,
+                      p.skill === 0 && { backgroundColor: '#FFF9C4' } // light yellow for new
+                    ]}
+                  >
                     <TouchableOpacity onPress={() => setExpandedPlayer(expandedPlayer === i ? null : i)}>
                       <Text>
-                      <Text>
-  {p.name} (Skill: {p.skill}){' '}
-  {p.skill === 0 && <Text style={styles.newTag}>(NEW)</Text>}
-</Text>
-                        {checkedInPlayers.includes(p.name) ? ' ✅' : ''}
+                        {p.name} (Skill: {p.skill}){' '}
+                        {p.skill === 0 && <Text style={styles.newTag}>(NEW)</Text>}
+                        {checkedInPlayers.includes(p.id) ? ' ✅' : ''}
                       </Text>
                     </TouchableOpacity>
                     {expandedPlayer === i && (
                       <View style={styles.actionsRow}>
-                        <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.name)} />
-                        {checkedInPlayers.includes(p.name) && (
-  <Button title="Check Out" color="#FF9800" onPress={() => checkOutPlayer(p.name)} />
-)}
+                        <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.id)} />
+                        {checkedInPlayers.includes(p.id) && (
+                          <Button title="Check Out" color="#FF9800" onPress={() => checkOutFromAdmin(p.name)} />
+                        )}
                         <Button title="Edit" color="#2196F3" onPress={() => {
                           setEditModeIndex(i);
                           setEditedName(p.name);
@@ -588,8 +579,13 @@ export default function App() {
                                   text: 'Delete',
                                   style: 'destructive',
                                   onPress: async () => {
-                                    const updated = players.filter((_, idx) => idx !== i);
-                                    setPlayers(updated);
+                                    try {
+                                      await deletePlayer(p.name);
+                                      const updated = await fetchPlayers();
+                                      setPlayers(updated);
+                                    } catch (error) {
+                                      console.error("Error deleting player:", error);
+                                    }
                                   },
                                 },
                               ]
