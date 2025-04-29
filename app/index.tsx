@@ -139,7 +139,7 @@ export default function App() {
       skill: !isNaN(skillInput) ? skillInput : currentPlayer.skill
     };
     try {
-      await updatePlayerService(currentPlayer.name, updatedPlayer.name, updatedPlayer.skill);
+      await updatePlayerService(currentPlayer.id, updatedPlayer.name, updatedPlayer.skill);
       const updatedPlayers = await fetchPlayers();
       setPlayers(updatedPlayers);
     } catch (error) {
@@ -559,7 +559,7 @@ export default function App() {
                       <View style={styles.actionsRow}>
                         <Button title="Check In" color="#4CAF50" onPress={() => checkInFromAdmin(p.id)} />
                         {checkedInPlayers.includes(p.id) && (
-                          <Button title="Check Out" color="#FF9800" onPress={() => checkOutFromAdmin(p.name)} />
+                          <Button title="Check Out" color="#FF9800" onPress={() => checkOutFromAdmin(p.id)} />
                         )}
                         <Button title="Edit" color="#2196F3" onPress={() => {
                           setEditModeIndex(i);
@@ -572,7 +572,7 @@ export default function App() {
                           onPress={() => {
                             Alert.alert(
                               'Confirm Delete',
-                              `Are you sure you want to delete ${p.name}?`,
+                              `Are you sure you want to delete ${p.id}?`,
                               [
                                 { text: 'Cancel', style: 'cancel' },
                                 {
@@ -580,7 +580,7 @@ export default function App() {
                                   style: 'destructive',
                                   onPress: async () => {
                                     try {
-                                      await deletePlayer(p.name);
+                                      await deletePlayer(p.id);
                                       const updated = await fetchPlayers();
                                       setPlayers(updated);
                                     } catch (error) {
