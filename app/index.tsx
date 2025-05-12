@@ -467,6 +467,7 @@ export default function App() {
         {!isAdmin ? (
           <View>
             <TextInput
+            autoComplete="off"
               placeholder="Your name"
               placeholderTextColor="#333"
               style={styles.input}
@@ -478,6 +479,7 @@ export default function App() {
             {message ? <Text style={styles.message}>{message}</Text> : null}
             <Text style={styles.subheader}>Admin Login</Text>
             <TextInput
+            autoComplete="off"
               placeholder="Admin code"
               placeholderTextColor="#333"
               style={styles.input}
@@ -509,6 +511,7 @@ export default function App() {
               <>
                 <Text style={styles.subheader}>Register New Player</Text>
                 <TextInput
+                autoComplete="off"
                   placeholder="Player Name"
                   placeholderTextColor="#333"
                   style={styles.input}
@@ -516,6 +519,7 @@ export default function App() {
                   onChangeText={setName}
                 />
                 <TextInput
+                autoComplete="off"
                   placeholder="Skill (0–100)"
                   placeholderTextColor="#333"
                   style={styles.input}
@@ -603,6 +607,7 @@ export default function App() {
                     {editModeIndex === i && (
                       <View>
                         <TextInput
+                        autoComplete="off"
                           placeholder="Edit Name"
                           placeholderTextColor="#333"
                           value={editedName}
@@ -610,6 +615,7 @@ export default function App() {
                           onChangeText={setEditedName}
                         />
                         <TextInput
+                        autoComplete="off"
                           placeholder="Edit Skill"
                           placeholderTextColor="#333"
                           keyboardType="numeric"
@@ -628,6 +634,7 @@ export default function App() {
               <>
                 <Text style={styles.subheader}>Generated Groups</Text>
                 <TextInput
+                autoComplete="off"
                   placeholder="Number of Groups"
                   placeholderTextColor="#333"
                   keyboardType="numeric"
@@ -668,6 +675,7 @@ export default function App() {
               <>
                 <Text style={styles.subheader}>Tournaments</Text>
                 <TextInput
+                autoComplete="off"
                   placeholder="Team Name"
                   placeholderTextColor="#333"
                   value={newTeamName}
