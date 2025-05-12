@@ -164,19 +164,19 @@ export default function App() {
   };
 
   const resetCheckIns = async () => {
-    // For simplicity, assume you have a Supabase endpoint to reset checkins.
-    // Alternatively, you could check out every player.
-    // Here, we simply clear the local state by checking out all players.
     try {
-      for (const player of checkedInPlayers) {
-        await supabaseCheckOut(player);
-      }
+      const promises = checkedInPlayers.map(async (playerId) => {
+        await supabaseCheckOut(playerId); // playerId is already correct
+      });
+      await Promise.all(promises); // Ensure all run before moving on
+  
       const updatedCheckins = await fetchCheckins();
       setCheckedInPlayers(updatedCheckins);
     } catch (error) {
       console.error("Error resetting check-ins:", error);
+      setMessage("Error resetting check-ins");
     }
-  };
+  };  
 
   const confirmResetCheckIns = () => {
     Alert.alert(
