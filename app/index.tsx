@@ -165,30 +165,26 @@ export default function App() {
   };
 
   const resetCheckIns = async () => {
-  try {
-    const { error } = await supabase
-      .from('checkins')
-      .delete()
-      .in('player_id', checkedInPlayers); // batch delete
-
-    if (error) throw error;
-
-    const updatedCheckins = await fetchCheckins();
-    setCheckedInPlayers(updatedCheckins);
-    setMessage('All check-ins reset');
-    setTimeout(() => setMessage(''), 2000);
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error("Error resetting check-ins:", error.message);
-    } else {
+    try {
+      for (const playerId of checkedInPlayers) {
+        const { error } = await supabase
+          .from('checkins')
+          .delete()
+          .eq('player_id', playerId);
+        if (error) throw error;
+      }
+      console.log("Checked in player IDs:", checkedInPlayers);
+  
+      const updatedCheckins = await fetchCheckins();
+      setCheckedInPlayers(updatedCheckins);
+      setMessage('All check-ins reset');
+      setTimeout(() => setMessage(''), 2000);
+    } catch (error) {
       console.error("Error resetting check-ins:", error);
+      setMessage('Failed to reset check-ins');
     }
-    setMessage('Failed to reset check-ins');
-    console.log("Resetting these player IDs:", checkedInPlayers);
-  }
-};
+  }; 
      
-
   const confirmResetCheckIns = () => {
     Alert.alert(
       'Reset All Check-ins',
