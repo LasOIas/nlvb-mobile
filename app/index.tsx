@@ -161,8 +161,9 @@ export default function App() {
   };
   
   const logoutAdmin = () => {
+    console.log("Logging out admin...");
     setIsAdmin(false);
-  };
+  };  
 
   const resetCheckIns = async () => {
     try {
@@ -767,11 +768,11 @@ export default function App() {
         )}
       </ScrollView>
       {isAdmin && (
-        <View style={styles.bottomActions}>
-          <Button title="Reset All Check-ins" color="#f44336" onPress={confirmResetCheckIns} />
-          <Button title="Logout" color="#888" onPress={confirmLogoutAdmin} />
-        </View>
-      )}
+  <View style={styles.bottomActions}>
+    <Button title="Reset All Check-ins" color="#f44336" onPress={confirmResetCheckIns} />
+    <Button title="Logout" color="#888" onPress={confirmLogoutAdmin} />
+  </View>
+)}
     </SafeAreaView>
   );
 }
