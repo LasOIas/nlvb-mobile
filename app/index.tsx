@@ -165,24 +165,21 @@ export default function App() {
 
   const resetCheckIns = async () => {
     try {
-      const idsToReset = players
-        .filter(p => checkedInPlayers.includes(p.id))
-        .map(p => p.id);
-  
-      for (const id of idsToReset) {
-        await supabaseCheckOut(id);
+      console.log("Resetting check-ins for:", checkedInPlayers); // Debug log
+      for (const playerId of checkedInPlayers) {
+        console.log("Checking out:", playerId); // See each ID
+        await supabaseCheckOut(playerId); // Must be UUID
       }
-  
       const updatedCheckins = await fetchCheckins();
+      console.log("Updated check-ins after reset:", updatedCheckins); // Log result
       setCheckedInPlayers(updatedCheckins);
-      setMessage('All check-ins have been reset.');
+      setMessage('All check-ins reset');
       setTimeout(() => setMessage(''), 2000);
     } catch (error) {
       console.error("Error resetting check-ins:", error);
       setMessage('Failed to reset check-ins');
-      setTimeout(() => setMessage(''), 2000);
     }
-  };  
+  };     
 
   const confirmResetCheckIns = () => {
     Alert.alert(
