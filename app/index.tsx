@@ -480,6 +480,7 @@ export default function App() {
               value={name}
               onChangeText={setName}
             />
+          
             <Button title="Check In" onPress={handleCheckIn} />
             <Button title="Register" color="#2196F3" onPress={registerPlayer} />
             {message ? <Text style={styles.message}>{message}</Text> : null}
@@ -767,12 +768,19 @@ export default function App() {
           </View>
         )}
       </ScrollView>
-      {isAdmin && (
-  <View style={styles.bottomActions}>
-    <Button title="Reset All Check-ins" color="#f44336" onPress={confirmResetCheckIns} />
-    <Button title="Logout" color="#888" onPress={confirmLogoutAdmin} />
+      <SafeAreaView style={styles.fullScreen}>
+  <View style={{ flex: 1 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 20 }}>
+      {/* Your content here */}
+    </ScrollView>
+    {isAdmin && (
+      <View style={styles.bottomActions}>
+        <Button title="Reset All Check-ins" color="#f44336" onPress={confirmResetCheckIns} />
+        <Button title="Logout" color="#888" onPress={confirmLogoutAdmin} />
+      </View>
+    )}
   </View>
-)}
-    </SafeAreaView>
+</SafeAreaView>
+</SafeAreaView>
   );
 }
