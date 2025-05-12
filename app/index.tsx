@@ -166,14 +166,18 @@ export default function App() {
 
   const resetCheckIns = async () => {
     try {
+      console.log("Resetting these IDs:", checkedInPlayers); // For debugging
       for (const playerId of checkedInPlayers) {
         const { error } = await supabase
           .from('checkins')
           .delete()
           .eq('player_id', playerId);
-        if (error) throw error;
+  
+        if (error) {
+          console.error(`Failed to check out player ${playerId}:`, error.message);
+          throw error;
+        }
       }
-      console.log("Checked in player IDs:", checkedInPlayers);
   
       const updatedCheckins = await fetchCheckins();
       setCheckedInPlayers(updatedCheckins);
@@ -183,7 +187,7 @@ export default function App() {
       console.error("Error resetting check-ins:", error);
       setMessage('Failed to reset check-ins');
     }
-  }; 
+  };   
      
   const confirmResetCheckIns = () => {
     Alert.alert(
