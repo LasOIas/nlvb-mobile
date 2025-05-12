@@ -14,6 +14,7 @@ import {
 
 import { fetchPlayers, addPlayer, updatePlayer as updatePlayerService, deletePlayer } from '../services/players';
 import { fetchCheckins, checkInPlayer as supabaseCheckIn, checkOutPlayer as supabaseCheckOut } from '../services/checkins';
+import { supabase } from '@/lib/supabase';
 
 interface Player {
   id: string;
@@ -164,22 +165,29 @@ export default function App() {
   };
 
   const resetCheckIns = async () => {
-    try {
-      console.log("Resetting check-ins for:", checkedInPlayers); // Debug log
-      for (const playerId of checkedInPlayers) {
-        console.log("Checking out:", playerId); // See each ID
-        await supabaseCheckOut(playerId); // Must be UUID
-      }
-      const updatedCheckins = await fetchCheckins();
-      console.log("Updated check-ins after reset:", updatedCheckins); // Log result
-      setCheckedInPlayers(updatedCheckins);
-      setMessage('All check-ins reset');
-      setTimeout(() => setMessage(''), 2000);
-    } catch (error) {
+  try {
+    const { error } = await supabase
+      .from('checkins')
+      .delete()
+      .in('player_id', checkedInPlayers); // batch delete
+
+    if (error) throw error;
+
+    const updatedCheckins = await fetchCheckins();
+    setCheckedInPlayers(updatedCheckins);
+    setMessage('All check-ins reset');
+    setTimeout(() => setMessage(''), 2000);
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error resetting check-ins:", error.message);
+    } else {
       console.error("Error resetting check-ins:", error);
-      setMessage('Failed to reset check-ins');
     }
-  };     
+    setMessage('Failed to reset check-ins');
+    console.log("Resetting these player IDs:", checkedInPlayers);
+  }
+};
+     
 
   const confirmResetCheckIns = () => {
     Alert.alert(
