@@ -768,19 +768,12 @@ export default function App() {
           </View>
         )}
       </ScrollView>
-      <SafeAreaView style={styles.fullScreen}>
-  <View style={{ flex: 1 }}>
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 20 }}>
-      {/* Your content here */}
-    </ScrollView>
-    {isAdmin && (
-      <View style={styles.bottomActions}>
-        <Button title="Reset All Check-ins" color="#f44336" onPress={confirmResetCheckIns} />
-        <Button title="Logout" color="#888" onPress={confirmLogoutAdmin} />
-      </View>
-    )}
+      {isAdmin && (
+  <View style={styles.bottomActions}>
+    <Button title="Reset All Check-ins" color="#f44336" onPress={confirmResetCheckIns} />
+    <Button title="Logout" color="#888" onPress={confirmLogoutAdmin} />
   </View>
-</SafeAreaView>
-</SafeAreaView>
+)}
+    </SafeAreaView>
   );
 }
