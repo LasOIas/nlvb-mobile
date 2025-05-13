@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 
 import { fetchPlayers, addPlayer, updatePlayer as updatePlayerService, deletePlayer } from '../services/players';
-import { fetchCheckins, checkInPlayer as supabaseCheckIn, checkOutPlayer as supabaseCheckOut } from '../services/checkins';
+import { cleanUpDuplicateCheckins, fetchCheckins, checkInPlayer as supabaseCheckIn, checkOutPlayer as supabaseCheckOut } from '../services/checkins';
 import { supabase } from '@/lib/supabase';
 
 interface Player {
@@ -54,12 +54,18 @@ export default function App() {
   const [showBracket, setShowBracket] = useState(false);
   const [rounds, setRounds] = useState<string[][][]>([]); // 3D array: rounds → matchups → teams
 
-  // Remove AsyncStorage restoration and instead load from Supabase
   useEffect(() => {
     const loadData = async () => {
       try {
+        try {
+          await cleanUpDuplicateCheckins(); // Don't let this crash the rest
+        } catch (err) {
+          console.error('Deduplication failed but continuing anyway:', err);
+        }
+  
         const playersData = await fetchPlayers();
         if (playersData) setPlayers(playersData);
+  
         const checkinsData = await fetchCheckins();
         if (checkinsData) setCheckedInPlayers(checkinsData);
       } catch (error) {
@@ -67,7 +73,7 @@ export default function App() {
       }
     };
     loadData();
-  }, []);
+  }, []);   
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
@@ -191,6 +197,7 @@ export default function App() {
   };   
      
   const confirmResetCheckIns = () => {
+    console.log("Reset All Check-ins tapped"); // add this
     Alert.alert(
       'Reset All Check-ins',
       'Are you sure you want to reset all check-ins?',
@@ -200,8 +207,9 @@ export default function App() {
       ]
     );
   };
-
+  
   const confirmLogoutAdmin = () => {
+    console.log("Logout tapped"); // add this
     Alert.alert(
       'Logout Admin',
       'Are you sure you want to logout?',
@@ -442,8 +450,10 @@ export default function App() {
       borderTopWidth: 1,
       borderColor: '#ccc',
       flexDirection: 'row',
-      justifyContent: 'space-around'
-    },
+      justifyContent: 'space-around',
+      zIndex: 99, // Added
+      height: 60, // Added
+    },    
     groupMetaRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -466,7 +476,7 @@ export default function App() {
   });
   
   return (
-    <SafeAreaView style={styles.fullScreen}>
+    <SafeAreaView style={[styles.fullScreen, { paddingBottom: 60 }]}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
         <Text style={styles.header}>NLVB App</Text>
         <Text style={styles.subheader}>Checked-in: {checkedInPlayers.length}</Text>
@@ -770,8 +780,12 @@ export default function App() {
       </ScrollView>
       {isAdmin && (
   <View style={styles.bottomActions}>
-    <Button title="Reset All Check-ins" color="#f44336" onPress={confirmResetCheckIns} />
-    <Button title="Logout" color="#888" onPress={confirmLogoutAdmin} />
+    <TouchableOpacity onPress={confirmResetCheckIns} style={{ backgroundColor: '#f44336', padding: 10, borderRadius: 6 }}>
+  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Reset All Check-ins</Text>
+</TouchableOpacity>
+<TouchableOpacity onPress={confirmLogoutAdmin} style={{ backgroundColor: '#888', padding: 10, borderRadius: 6 }}>
+  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Logout</Text>
+</TouchableOpacity>
   </View>
 )}
     </SafeAreaView>
