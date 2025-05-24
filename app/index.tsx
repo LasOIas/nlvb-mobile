@@ -58,9 +58,9 @@ export default function App() {
     const loadData = async () => {
       try {
         try {
-          await cleanUpDuplicateCheckins(); // Run safely
+          await cleanUpDuplicateCheckins(); // Don't let this crash the rest
         } catch (err) {
-          console.error('⚠️ Duplicate cleanup error (non-blocking):', err);
+          console.error('Deduplication failed but continuing anyway:', err);
         }
   
         const playersData = await fetchPlayers();
@@ -68,32 +68,12 @@ export default function App() {
   
         const checkinsData = await fetchCheckins();
         if (checkinsData) setCheckedInPlayers(checkinsData);
-      } catch (e) {
-        if (e instanceof Error) {
-          console.error('❌ loadData failed:', e.message);
-        } else {
-          console.error('❌ loadData failed:', e);
-        }
+      } catch (error) {
+        console.error("Error fetching data from Supabase:", error);
       }
     };
     loadData();
-    useEffect(() => {
-      const testSupabase = async () => {
-        const { data, error } = await supabase
-          .from('players')
-          .select('*')
-          .limit(1);
-    
-        if (error) {
-          console.error('❌ Supabase connection failed:', error.message);
-        } else {
-          console.log('✅ Supabase test success. Sample player:', data);
-        }
-      };
-    
-      testSupabase();
-    }, []);    
-  }, []);    
+  }, []);   
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
@@ -511,13 +491,7 @@ export default function App() {
               onChangeText={setName}
             />
           
-          <Button
-  title="Check In"
-  onPress={() => {
-    console.log('[Check In Button] tapped');
-    handleCheckIn();
-  }}
-/>
+            <Button title="Check In" onPress={handleCheckIn} />
             <Button title="Register" color="#2196F3" onPress={registerPlayer} />
             {message ? <Text style={styles.message}>{message}</Text> : null}
             <Text style={styles.subheader}>Admin Login</Text>
@@ -530,9 +504,7 @@ export default function App() {
               value={adminCode}
               onChangeText={setAdminCode}
             />
-            <TouchableOpacity onPress={() => { console.log('[Logout] tapped'); confirmLogoutAdmin(); }}>
-  <Text style={{ color: '#fff' }}>Logout</Text>
-</TouchableOpacity>
+            <Button title="Login as Admin" onPress={loginAdmin} />
           </View>
         ) : (
           <View>
